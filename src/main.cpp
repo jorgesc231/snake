@@ -15,9 +15,9 @@
 #include <GLES2/gl2.h>          // Use GL ES 2
 
 // Imgui stuff
-#include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_opengl3.h"
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_opengl3.h>
 
 #include "assets_loader.h"
 #include "renderer.h"
@@ -26,11 +26,13 @@
 
 #define MAX_SND_CHANNELS 8
 
+#define IMGUI_IMPL_OPENGL_DEBUG
 #define NDEBUG 1
 
+#define OPENGL_ERROR { GLenum err = glGetError(); IM_ASSERT(err == GL_NO_ERROR); }
 void print_gles_errors();
 
-#define ACTIVATE_IMGUI 1
+#define ACTIVATE_IMGUI 0
 
 // TODO: Ahora respeta el limite, pero el doble...
 #define FPS 60
@@ -652,7 +654,8 @@ void update_snake(Snake *snake, Game_state *state)
 
 void game_render(Game_state *state)
 {
-    uint32_t indexCount = 0;
+    //uint32_t indexCount = 0;
+	GLushort indexCount = 0;
     uint32_t vertexCount = 0;
     
     Vertex* buffer = vertices;
@@ -737,7 +740,8 @@ void game_render(Game_state *state)
     print_gles_errors();
     
     //renderer_draw(&prueba->VAO, &prueba->IndexBuffer, &prueba->shader);
-    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, NULL);
+    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, NULL);
+    //glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, NULL);
 
     print_gles_errors();
 
@@ -956,6 +960,6 @@ void print_gles_errors()
 	if (err != GL_NO_ERROR) {
 		// Failed
 		printf("ERROR, code %u\n", err);
-		assert(false);
+		//assert(false);
 	}
 }

@@ -181,9 +181,11 @@ int init_batch_renderer(batch_renderer *renderer)
 
     // Load Texture
     renderer->textures[0] = texture_load("../assets/graphics/snake_atlas.png");
+    //renderer->textures[0] = texture_load("/home/jorge/eclipse_projects/snake/assets/graphics/snake_atlas.png");
     //renderer->textures[0] = texture_load("atlas3.png");
     
     renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("../src/shaders/texture.vertex", "../src/shaders/texture.fragment");
+    //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("/home/jorge/eclipse_projects/snake/src/shaders/texture.vertex", "/home/jorge/eclipse_projects/snake/src/shaders/texture.fragment");
     //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("texture.vertex", "texture.fragment");
 
     assert(renderer->textures[0]);
@@ -208,8 +210,10 @@ int init_batch_renderer(batch_renderer *renderer)
     const size_t MaxIndexCount = MaxQuadCount * 6;
     
     // Crea los indices de forma automatica
-    uint32_t indices[MaxIndexCount];
-    uint32_t offset = 0;
+    //uint32_t indices[MaxIndexCount];
+    GLushort indices[MaxIndexCount];
+    //uint32_t offset = 0;
+    GLushort offset = 0;
     
     for (size_t i = 0; i < MaxIndexCount; i += 6)
     {
@@ -246,7 +250,7 @@ int init_batch_renderer(batch_renderer *renderer)
     // Inicializa el index buffer
     glGenBuffers(1, &renderer->index_buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, MaxIndexCount * sizeof(unsigned int), indices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, MaxIndexCount * sizeof(unsigned short), indices, GL_STATIC_DRAW);
     
     
 
