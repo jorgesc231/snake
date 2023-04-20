@@ -179,13 +179,16 @@ int init_batch_renderer(batch_renderer *renderer)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //glDisable(GL_BLEND);
 
-    // Load Texture
+    // Load Texture and Shaders
+#if _RPI1
+    renderer->textures[0] = texture_load("/home/jorge/eclipse_projects/snake/assets/graphics/snake_atlas.png");
+    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("/home/jorge/eclipse_projects/snake/src/shaders/texture.vertex", "/home/jorge/eclipse_projects/snake/src/shaders/texture.fragment");
+#elif _WIN32
     renderer->textures[0] = texture_load("../assets/graphics/snake_atlas.png");
-    //renderer->textures[0] = texture_load("/home/jorge/eclipse_projects/snake/assets/graphics/snake_atlas.png");
-    //renderer->textures[0] = texture_load("atlas3.png");
-    
     renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("../src/shaders/texture.vertex", "../src/shaders/texture.fragment");
-    //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("/home/jorge/eclipse_projects/snake/src/shaders/texture.vertex", "/home/jorge/eclipse_projects/snake/src/shaders/texture.fragment");
+#endif
+    
+    //renderer->textures[0] = texture_load("atlas3.png");
     //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("texture.vertex", "texture.fragment");
 
     assert(renderer->textures[0]);

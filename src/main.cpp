@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <math.h>
 
+#include <unistd.h>
+#include <limits.h>
+
 #include <assert.h>
 
 #include <SDL2/SDL.h>
@@ -32,7 +35,11 @@
 #define OPENGL_ERROR { GLenum err = glGetError(); IM_ASSERT(err == GL_NO_ERROR); }
 void print_gles_errors();
 
+#if _RPI1
 #define ACTIVATE_IMGUI 0
+#else
+#define ACTIVATE_IMGUI 1
+#endif
 
 // TODO: Ahora respeta el limite, pero el doble...
 #define FPS 60
@@ -121,8 +128,15 @@ void draw_debug_window(Game_state *state);
 
 int main(int argc, char* args[])
 {
-	// NOTE: Esto es necesario para que SDL2 funcione con ANGLE
+	char cwd[PATH_MAX];
+	if (getcwd(cwd, sizeof(cwd)) != NULL) {
+		SDL_Log("Current working dir: %s\n", cwd);
+	} else {
+	    SDL_Log("getcwd() error");
+	    return 1;
+	}
 
+	// NOTE: Esto es necesario para que SDL2 funcione con ANGLE
 	SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
     //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
     
@@ -173,7 +187,7 @@ int main(int argc, char* args[])
         sounds[SND_SNAKE_MOVE] = Mix_LoadWAV("../assets/sound/move.mp3");
         sounds[SND_SNAKE_DIE] = Mix_LoadWAV("../assets/sound/gameover.mp3");
 
-        audio_loaded = true;
+        audio_loaded = sounds[SND_SNAKE_EAT], sounds[SND_SNAKE_MOVE], sounds[SND_SNAKE_DIE];
     }
 
 	
