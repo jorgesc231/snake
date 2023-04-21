@@ -52,6 +52,9 @@ void print_gles_errors();
 #define SQUARE_SIZE 40
 
 #define DEFAULT_TIMESTEEP 0.15f
+#define DEFAULT_IMPAR_COLOR glm::vec3(170, 215, 81)
+#define DEFAULT_PAR_COLOR glm::vec3(162, 209, 73)
+
 
 const unsigned int DISP_WIDTH = 1280;
 const unsigned int DISP_HEIGHT = 720;
@@ -101,7 +104,6 @@ Snake snake[SNAKE_LENGTH] = {0};
 int tail_counter = 0;
 
 bool game_over = false;
-bool pause = false;
 
 v2 food_pos = {10, 7};
 bool food_active = false;
@@ -111,10 +113,13 @@ Mix_Chunk* sounds[SND_MAX];
 Vertex vertices[4000];
 
 // Our state
-bool show_demo_window = false;
+bool show_demo_window = true;
 bool show_another_window = false;
 bool show_debug_overlay = NDEBUG;    // TRUE cuando se lanza en debug mode
-//ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
+glm::vec3 impar_color = DEFAULT_IMPAR_COLOR;
+glm::vec3 par_color = DEFAULT_PAR_COLOR;
 
 bool audio_loaded = false;
 bool audio_enabled = true;
@@ -355,7 +360,7 @@ int main(int argc, char* args[])
             	}
 
 
-                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat) state.status = PAUSED;
+                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) state.status = PAUSED;
                 
                 if (event.key.keysym.sym == SDLK_SPACE && !event.key.repeat ) {
                     
@@ -683,10 +688,10 @@ void game_render(Game_state *state)
         for (int x = 0; x < SQUARE_X; x++)
         {
         	if (impar) {
-        		buffer = create_color_quad(buffer, glm::vec2(x, y), glm::vec3(170, 215, 81));
+        		buffer = create_color_quad(buffer, glm::vec2(x, y), impar_color);
         		impar = false;
         	} else {
-        		buffer = create_color_quad(buffer, glm::vec2(x, y), glm::vec3(162, 209, 73));
+        		buffer = create_color_quad(buffer, glm::vec2(x, y), par_color);
         		impar = true;
         	}
 
@@ -747,7 +752,7 @@ void game_render(Game_state *state)
     glUniformMatrix4fv(MVPUniformLoc, 1, GL_FALSE, &mvp[0][0]);
 
     //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClearColor(0.34f, 0.54f, 0.20f, 1.0f);
+    glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
     glClear(GL_COLOR_BUFFER_BIT);
 
 
@@ -942,6 +947,7 @@ void draw_debug_overlay()
         ImGui::Text("Renderer Debug Overlay");
 	    ImGui::Separator();
 
+
 	    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	    if (ImGui::IsMousePosValid())
@@ -949,6 +955,15 @@ void draw_debug_overlay()
 	    else
 	    	ImGui::Text("Mouse Position: <invalid>");
 
+
+        ImGui::Separator();
+
+        ImGui::ColorEdit3("Background##2f", &clear_color[0], ImGuiColorEditFlags_Float);
+
+        // NOTA: Por alguna razon que no recuerdo decidi usar los colores como enteros en el renderer...
+        //static glm::vec3 color = glm::vec3(par_color.r / 255.0f, par_color.g / 255.0f, par_color.b / 255.0f);
+        //ImGui::ColorEdit3("Quads pares", &par_color[0]);
+        //ImGui::ColorEdit3("Quads impares", &impar_color[0]);
 
 	    if (ImGui::BeginPopupContextWindow())
 	    {
