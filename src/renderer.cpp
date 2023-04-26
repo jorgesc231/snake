@@ -32,7 +32,7 @@ void init_camera_3d(Camera *camera, float FOV, float width, float height, float 
 
 Vertex *create_color_quad(Vertex *target, glm::vec2 position, glm::vec3 color)
 {
-    float size = 1.0f;  // Quad de 1 x 1'
+    float size = 1.0f;  // Quad de 1 x 1
 
     AtlasSprite sprite = DescAtlas[NO_TEXTURE];
 
@@ -172,9 +172,6 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
 
 int init_batch_renderer(batch_renderer *renderer)
 {
-
-	SDL_Log("%s\n", SDL_GetBasePath());
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //glDisable(GL_BLEND);
@@ -212,10 +209,8 @@ int init_batch_renderer(batch_renderer *renderer)
     const size_t MaxVertexCount = MaxQuadCount * 4;
     const size_t MaxIndexCount = MaxQuadCount * 6;
     
-    // Crea los indices de forma automatica
-    //uint32_t indices[MaxIndexCount];
+    // Crea los indices de forma automatica (GLES 2.0 solo soporta shorts...)
     GLushort indices[MaxIndexCount];
-    //uint32_t offset = 0;
     GLushort offset = 0;
     
     for (size_t i = 0; i < MaxIndexCount; i += 6)

@@ -10,9 +10,19 @@
 
 #include <assert.h>
 
+#ifdef __EMSCRIPTEN__
+#include <SDL.h>
+#include <SDL_image.h>
+#include <SDL_ttf.h>
+#include <SDL_mixer.h>
+
+#include <emscripten.h>
+
+#else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
+#endif
 
 //#include <SDL2/SDL_opengles2.h>
 #include <GLES2/gl2.h>          // Use GL ES 2
@@ -92,6 +102,11 @@ struct Snake {
 };
 
 struct Game_state {
+    char *base_path = NULL;
+
+    SDL_Window* window = NULL;
+    SDL_GLContext context = NULL;
+
     Camera camara;
     batch_renderer renderer;
 
@@ -99,6 +114,8 @@ struct Game_state {
     int score = 0;
     GAME_STATUS status = PAUSED;
 };
+
+char cwd[PATH_MAX];
 
 Snake snake[SNAKE_LENGTH] = {0};
 int tail_counter = 0;
@@ -112,6 +129,9 @@ Mix_Chunk* sounds[SND_MAX];
 
 Vertex vertices[4000];
 
+bool quit = false;
+uint32_t prev_time = SDL_GetTicks();
+
 // Our state
 bool show_demo_window = true;
 bool show_another_window = false;
@@ -124,6 +144,9 @@ glm::vec3 par_color = DEFAULT_PAR_COLOR;
 bool audio_loaded = false;
 bool audio_enabled = true;
 
+int init_engine(Game_state *state);
+void do_main_loop(Game_state *state);
+int shutdown_app(Game_state *state);
 int init_game(Game_state *state);
 void update_snake(Snake *snake, Game_state *state);
 void game_render(Game_state *state);
@@ -133,29 +156,48 @@ void draw_debug_window(Game_state *state);
 
 int main(int argc, char* args[])
 {
-	char cwd[PATH_MAX];
-	if (getcwd(cwd, sizeof(cwd)) != NULL) {
-		SDL_Log("Current working dir: %s\n", cwd);
-	} else {
-	    SDL_Log("getcwd() error");
-	    return 1;
-	}
+    // Estado del juego
+    Game_state state;
 
-	// NOTE: Esto es necesario para que SDL2 funcione con ANGLE
-	SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
+    init_engine(&state);
+    
+    do_main_loop(&state);
+
+    shutdown_app(&state);
+
+	return EXIT_SUCCESS;
+}
+
+
+int init_engine(Game_state *state)
+{
+    bool success = false;
+
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        SDL_Log("Current working dir: %s\n", cwd);
+    } else {
+        SDL_Log("getcwd() error");
+        return 1;
+    }
+
+    // Necesario para contruir el path hacia los assets
+    if (state->base_path = SDL_GetBasePath()) {
+        SDL_Log("base path: %s\n", SDL_GetBasePath());    
+    } else {
+        SDL_Log("No se pudo obtener el Base Path\n");    
+    }
+
+
+    // NOTE: Esto es necesario para que SDL2 funcione con ANGLE
+    SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
     //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
-    
-	// The Window
-	SDL_Window* window = NULL;
-    
-	// The OpenGl Context
-	SDL_GLContext context = NULL;
-    
-	// init SDL
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
-		SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		return EXIT_FAILURE;
-	}
+
+
+    // init SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
+        SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        return EXIT_FAILURE;
+    }
 
     //Initialize PNG loading
     int imgFlags = IMG_INIT_PNG;
@@ -175,8 +217,7 @@ int main(int argc, char* args[])
     {
         fprintf(stderr, "Error al inicializar SDL_Mix: %s\n", Mix_GetError());
         
-    }
-    else {
+    } else {
 
         if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) == -1)
         {
@@ -195,8 +236,8 @@ int main(int argc, char* args[])
         audio_loaded = sounds[SND_SNAKE_EAT], sounds[SND_SNAKE_MOVE], sounds[SND_SNAKE_DIE];
     }
 
-	
-	// Request OpenGL ES 2.0
+
+        // Request OpenGL ES 2.0
     // Por alguna razon me da un contexto 3.0 (podria no funcionar en rpi1...)
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
@@ -205,61 +246,56 @@ int main(int argc, char* args[])
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     
-	// Want double-buffering
+    // Want double-buffering
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
 
+    // Create the window
+    state->window = SDL_CreateWindow("Snake2D - SDL2 + GLES2", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, DISP_WIDTH, DISP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 
+    if (!state->window)
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the main window.", NULL);
+        return EXIT_FAILURE;
+    }
 
-	// Create the window
-	window = SDL_CreateWindow("Snake2D - SDL2 + GLES2", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, DISP_WIDTH, DISP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-
-	if (!window)
-	{
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the main window.", NULL);
-		return EXIT_FAILURE;
-	}
-
-	// Create OpenGL context
-	context = SDL_GL_CreateContext(window);
+    // Create OpenGL context
+    state->context = SDL_GL_CreateContext(state->window);
     
-	if (!context)
-	{
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the OpenGL context.", NULL);
-		SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "[SDL] GL context creation failed!");
-		return EXIT_FAILURE;
-	}
+    if (!state->context)
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the OpenGL context.", NULL);
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "[SDL] GL context creation failed!");
+        return EXIT_FAILURE;
+    }
 
-	SDL_GL_MakeCurrent(window, context);
+    SDL_GL_MakeCurrent(state->window, state->context);
 
     SDL_GL_SetSwapInterval(0);
     
-	SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
-	SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
-	SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
+    SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
+    SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
+    SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
 
     // Permite redimensionar la ventana
-    SDL_SetWindowResizable(window, SDL_TRUE);
-    SDL_SetWindowMinimumSize(window, 960, 540);
+    SDL_SetWindowResizable(state->window, SDL_TRUE);
+    SDL_SetWindowMinimumSize(state->window, 960, 540);
 
     glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
 
 
-    // Estado del juego
-    Game_state state;
-
     // Inicializa el renderer
 
-    init_camera_2d(&state.camara, 1280, 720, glm::vec2((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - (SQUARE_Y * SQUARE_SIZE / 2)));
-    init_batch_renderer(&state.renderer);
+    init_camera_2d(&state->camara, 1280, 720, glm::vec2(0, 0));
+    init_batch_renderer(&state->renderer);
     print_gles_errors();
 
 
     // Inicializa el juego
-	init_game(&state);
+    init_game(state);
 
     
 #if ACTIVATE_IMGUI
@@ -275,19 +311,20 @@ int main(int argc, char* args[])
     //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(window, context);
+    ImGui_ImplSDL2_InitForOpenGL(state->window, state->context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 #endif
 
     print_gles_errors();
     
-    update_snake(snake, &state);
+    update_snake(snake, state);
 
-    bool quit = false;
-    uint32_t prev_time = SDL_GetTicks();
-    
-	// Main loop
-    
+
+    return success;
+}
+
+void do_main_loop(Game_state *state)
+{
     while (!quit) {
         
         // events loop
@@ -296,7 +333,7 @@ int main(int argc, char* args[])
         while(SDL_PollEvent(&event) != 0) {
 
 #if ACTIVATE_IMGUI
-        	ImGui_ImplSDL2_ProcessEvent(&event);
+            ImGui_ImplSDL2_ProcessEvent(&event);
 #endif
 
             if (event.type == SDL_QUIT) {
@@ -305,86 +342,90 @@ int main(int argc, char* args[])
 
             // Eventos de la ventana
             if (event.type == SDL_WINDOWEVENT) {
-            	switch(event.window.event) {
-            		case SDL_WINDOWEVENT_SHOWN:
-					{
-						SDL_Log("SDL_WINDOWEVENT_SHOW");
-					} break;
+                switch(event.window.event) {
+                    case SDL_WINDOWEVENT_SHOWN:
+                    {
+                        SDL_Log("SDL_WINDOWEVENT_SHOW");
+                    } break;
 
-            		case SDL_WINDOWEVENT_RESIZED:
-            		{
+                    case SDL_WINDOWEVENT_RESIZED:
+                    {
                         SDL_Log("Window %d resize to %dx%d\n", event.window.windowID,
                                 event.window.data1, event.window.data2);
-            		} break;
+                    } break;
 
-            		case SDL_WINDOWEVENT_SIZE_CHANGED:
-            		{
-            			SDL_Log("Window %d size changed to %dx%d\n", event.window.windowID, event.window.data1, event.window.data2);
-            			glViewport(0, 0, event.window.data1, event.window.data2);
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    {
+                        SDL_Log("Window %d size changed to %dx%d\n", event.window.windowID, event.window.data1, event.window.data2);
+                        glViewport(0, 0, event.window.data1, event.window.data2);
 
-            		} break;
-            	}
+                    } break;
+                }
             }
 
 
             if (event.type == SDL_KEYDOWN ) {
-            	if (event.key.keysym.sym == SDLK_UP && !event.key.repeat) {
-            		if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + -1 != 0) {
-            			snake[0].direction = (v2){0, -1};
+                if (event.key.keysym.sym == SDLK_UP && !event.key.repeat) {
+                    if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + -1 != 0) {
+                        snake[0].direction = (v2){0, -1};
 
                         if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
 
-            	}
-            	if (event.key.keysym.sym == SDLK_DOWN && !event.key.repeat) {
-            		if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + 1 != 0) {
-            			snake[0].direction = (v2){0, 1};
+                }
+                if (event.key.keysym.sym == SDLK_DOWN && !event.key.repeat) {
+                    if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + 1 != 0) {
+                        snake[0].direction = (v2){0, 1};
 
                         if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
-            	}
-            	if (event.key.keysym.sym == SDLK_RIGHT && !event.key.repeat) {
-            		if (snake[0].direction.x + 1 != 0 && snake[0].direction.y + 0 != 0) {
-            			snake[0].direction = (v2){1, 0};
+                }
+                if (event.key.keysym.sym == SDLK_RIGHT && !event.key.repeat) {
+                    if (snake[0].direction.x + 1 != 0 && snake[0].direction.y + 0 != 0) {
+                        snake[0].direction = (v2){1, 0};
 
                         if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
 
-            	}
-            	if (event.key.keysym.sym == SDLK_LEFT && !event.key.repeat) {
-            		if (snake[0].direction.x + -1 != 0 && snake[0].direction.y + 0 != 0) {
-            			snake[0].direction = (v2){-1, 0};
+                }
+                if (event.key.keysym.sym == SDLK_LEFT && !event.key.repeat) {
+                    if (snake[0].direction.x + -1 != 0 && snake[0].direction.y + 0 != 0) {
+                        snake[0].direction = (v2){-1, 0};
 
                         if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
-            	}
+                }
 
 
-                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) state.status = PAUSED;
+                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state->status != LOST) state->status = PAUSED;
                 
                 if (event.key.keysym.sym == SDLK_SPACE && !event.key.repeat ) {
                     
-                    if (state.status == LOST) {
-                        init_game(&state);            
+                    if (state->status == LOST) {
+                        init_game(state);            
                     }                
 
-                    state.status = PLAY;
+                    state->status = PLAY;
                 }
 
 
                 if (event.key.keysym.sym == SDLK_F1 && !event.key.repeat) {
                     show_debug_overlay = !show_debug_overlay;
                 }
+
+                if (event.key.keysym.sym == SDLK_F5 && !event.key.repeat) {
+                    quit = true;
+                }
             }
         }
         
         // The code calculates the elapsedTime in seconds since the last time this code was executed.
-		// Animate
+        // Animate
         uint32_t current_time = SDL_GetTicks();
         float time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
+        
 
-
-        if (time_to_wait > 0 && time_to_wait <= FRAME_TARGET_TIME) {
+        if (time_to_wait > 0 && time_to_wait < FRAME_TARGET_TIME) {
             SDL_Delay(time_to_wait);
         }
 
@@ -399,16 +440,16 @@ int main(int argc, char* args[])
 
         // Actualizacion de estado del juego
 
-        if (tiempo > state.time_steep && state.status == PLAY) {	
+        if (tiempo > state->time_steep && state->status == PLAY) {    
 
-            update_snake(snake, &state);
+            update_snake(snake, state);
 
             // Food Collision
             if ((snake[0].position.x == food_pos.x && snake[0].position.y == food_pos.y))
             {
                 //snake[snake.counterTail].position = snakePosition[counterTail - 1];
                 tail_counter += 1;
-                state.score += 1;
+                state->score += 1;
                 food_active = false;
 
                 if (audio_enabled) Mix_PlayChannel(CH_EAT, sounds[SND_SNAKE_EAT], 0);
@@ -454,9 +495,7 @@ int main(int argc, char* args[])
         }
 
 
-
-
-        if (state.status == LOST && game_over) {
+        if (state->status == LOST && game_over) {
             //init_game(&state);
             //update_snake(snake, &state);
             
@@ -467,8 +506,8 @@ int main(int argc, char* args[])
 
 
         // Renderizar
-        game_render(&state);
-		print_gles_errors();
+        game_render(state);
+        print_gles_errors();
 
 #if ACTIVATE_IMGUI
         // Start the Dear ImGui frame
@@ -482,7 +521,7 @@ int main(int argc, char* args[])
 
 
         if (show_debug_overlay) {
-            draw_debug_window(&state);
+            draw_debug_window(state);
             draw_debug_overlay();
         }
 
@@ -499,24 +538,26 @@ int main(int argc, char* args[])
 
 
         // Actualiza la ventana
-        SDL_GL_SwapWindow(window);
+        SDL_GL_SwapWindow(state->window);
     }
-    
+}
+
+
+// TODO: Falta...
+int shutdown_app(Game_state *state)
+{
 #if ACTIVATE_IMGUI
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(context);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 #endif
 
-	return EXIT_SUCCESS;
+    SDL_GL_DeleteContext(state->context);
+    SDL_DestroyWindow(state->window);
+    SDL_Quit();
 }
-
-
 
 int init_game(Game_state *state)
 {
@@ -736,8 +777,7 @@ void game_render(Game_state *state)
     //  Because multiplying matrices occurs from right to left,
     // we transform the matrix in reverse order: translate, rotate, and then scale.
     glm::mat4 model = glm::mat4(1.0f);
-    //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::translate(model, glm::vec3((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - (SQUARE_Y * SQUARE_SIZE / 2), 0.0f));
     model = glm::scale(model, glm::vec3(SQUARE_SIZE, SQUARE_SIZE, 0.0f));
 
     glm::mat4 mvp = state->camara.projection * state->camara.view * model;
@@ -758,9 +798,8 @@ void game_render(Game_state *state)
 
     print_gles_errors();
     
-    //renderer_draw(&prueba->VAO, &prueba->IndexBuffer, &prueba->shader);
+    // NOTA: OpenGL ES 2.0 solo soporta indices de tipo SHORT, 3.0 soporta INT.
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, NULL);
-    //glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, NULL);
 
     print_gles_errors();
 
@@ -788,7 +827,7 @@ void draw_debug_window(Game_state *state)
 
 
 	if (state->status == PLAY)	ImGui::TextColored(ImVec4(0, 255, 0, 1), "PLAY");
-	if (state->status == PAUSED) ImGui::TextColored(ImVec4(255, 0, 0, 1), "PAUSED");
+	if (state->status == PAUSED) ImGui::TextColored(ImVec4(255, 0, 255, 1), "PAUSED");
 	if (state->status == LOST)  ImGui::TextColored(ImVec4(255, 0, 0, 1), "LOST");
 
     //if (item_disabled)
@@ -818,6 +857,8 @@ void draw_debug_window(Game_state *state)
 		state->status = LOST;
 	}
 
+    ImGui::Separator();
+
 	ImGui::SliderFloat("Time Step", &state->time_steep, 0.1f, 1.0f);
     ImGui::Checkbox("Audio", &audio_enabled);
     //ImGui::SameLine();
@@ -835,8 +876,8 @@ void draw_debug_window(Game_state *state)
 
     ImGui::Separator();
 
-    ImGui::InputInt("food pos x", &food_pos.x);
-    ImGui::InputInt("food pos y", &food_pos.y);
+    ImGui::InputInt("Food x", &food_pos.x);
+    ImGui::InputInt("Food y", &food_pos.y);
     if (food_pos.x > SQUARE_X - 1) food_pos.x = SQUARE_X - 1;
     if (food_pos.x < 0) food_pos.x = 0;
     if (food_pos.y > SQUARE_Y - 1) food_pos.y = SQUARE_Y - 1;
@@ -846,7 +887,7 @@ void draw_debug_window(Game_state *state)
 
     static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_RowBg;
 
-    if (ImGui::BeginTable("table1", 5, flags))
+    if (ImGui::BeginTable("body_table", 5, flags))
     {
 		// Submit columns name with TableSetupColumn() and call TableHeadersRow() to create a row with a header in each column.
 		// (Later we will show how TableSetupColumn() has other uses, optional flags, sizing weight etc.)
