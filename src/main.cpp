@@ -70,9 +70,9 @@ const unsigned int DISP_WIDTH = 1280;
 const unsigned int DISP_HEIGHT = 720;
 
 enum GAME_STATUS {
-	PLAY,
-	PAUSED,
-	LOST,
+    PLAY,
+    PAUSED,
+    LOST,
 };
 
 enum
@@ -92,7 +92,7 @@ enum
 };
 
 struct v2 {
-	int x, y;
+    int x, y;
 };
 
 struct Snake {
@@ -165,7 +165,7 @@ int main(int argc, char* args[])
 
     shutdown_app(&state);
 
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
 
@@ -568,9 +568,9 @@ int init_game(Game_state *state)
     state->status = PAUSED;
 
     for (int i = 0; i < SNAKE_LENGTH; i++) {
-    	snake[i].position = (v2){0, 0};
+        snake[i].position = (v2){0, 0};
         snake[i].direction = (v2){0, 0};
-    	snake[i].sprite = NO_TEXTURE;
+        snake[i].sprite = NO_TEXTURE;
     }
 
     tail_counter = 3;
@@ -715,7 +715,7 @@ void update_snake(Snake *snake, Game_state *state)
 void game_render(Game_state *state)
 {
     //uint32_t indexCount = 0;
-	GLushort indexCount = 0;
+    GLushort indexCount = 0;
     uint32_t vertexCount = 0;
     
     Vertex* buffer = vertices;
@@ -728,13 +728,13 @@ void game_render(Game_state *state)
     {
         for (int x = 0; x < SQUARE_X; x++)
         {
-        	if (impar) {
-        		buffer = create_color_quad(buffer, glm::vec2(x, y), impar_color);
-        		impar = false;
-        	} else {
-        		buffer = create_color_quad(buffer, glm::vec2(x, y), par_color);
-        		impar = true;
-        	}
+            if (impar) {
+                buffer = create_color_quad(buffer, glm::vec2(x, y), impar_color);
+                impar = false;
+            } else {
+                buffer = create_color_quad(buffer, glm::vec2(x, y), par_color);
+                impar = true;
+            }
 
             indexCount += 6;
             vertexCount += 4;
@@ -745,7 +745,7 @@ void game_render(Game_state *state)
     for (int i = 0; i < tail_counter; i++) {
 
         if (snake[i].sprite != NO_TEXTURE) {
-    	   buffer = create_texture_quad(buffer, snake[i].position.x, snake[i].position.y, snake[i].sprite);
+           buffer = create_texture_quad(buffer, snake[i].position.x, snake[i].position.y, snake[i].sprite);
 
             indexCount += 6;
             vertexCount += 4;
@@ -819,16 +819,16 @@ void draw_debug_window(Game_state *state)
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
     
     //ImGui::SetNextWindowBgAlpha(0.80f); // Transparent background
-	//ImGui::Begin("Estado del juego", NULL, 0);
+    //ImGui::Begin("Estado del juego", NULL, 0);
     ImGui::Begin("Estado del juego", &show_debug_overlay, window_flags);
 
-	ImGui::Text("Estado:");
-	ImGui::SameLine(0, 20);
+    ImGui::Text("Estado:");
+    ImGui::SameLine(0, 20);
 
 
-	if (state->status == PLAY)	ImGui::TextColored(ImVec4(0, 255, 0, 1), "PLAY");
-	if (state->status == PAUSED) ImGui::TextColored(ImVec4(255, 0, 255, 1), "PAUSED");
-	if (state->status == LOST)  ImGui::TextColored(ImVec4(255, 0, 0, 1), "LOST");
+    if (state->status == PLAY)  ImGui::TextColored(ImVec4(0, 255, 0, 1), "PLAY");
+    if (state->status == PAUSED) ImGui::TextColored(ImVec4(255, 0, 255, 1), "PAUSED");
+    if (state->status == LOST)  ImGui::TextColored(ImVec4(255, 0, 0, 1), "LOST");
 
     //if (item_disabled)
     //    ImGui::BeginDisabled(true);
@@ -836,30 +836,30 @@ void draw_debug_window(Game_state *state)
     //if (item_disabled)
     //        ImGui::EndDisabled();
 
-	ImGui::SameLine(0, 40);
-	if (ImGui::Button("PLAY", ImVec2(50, 20))) {
+    ImGui::SameLine(0, 40);
+    if (ImGui::Button("PLAY", ImVec2(50, 20))) {
         if (state->status == LOST) {
             init_game(state);
             update_snake(snake, state);
         }
 
         state->status = PLAY;
-	}
-	ImGui::SameLine();
+    }
+    ImGui::SameLine();
 
-	if (ImGui::Button("PAUSE", ImVec2(50, 20))) {
-		state->status = PAUSED;
-	}
+    if (ImGui::Button("PAUSE", ImVec2(50, 20))) {
+        state->status = PAUSED;
+    }
 
-	ImGui::SameLine();
+    ImGui::SameLine();
 
-	if (ImGui::Button("LOST", ImVec2(50, 20))) {
-		state->status = LOST;
-	}
+    if (ImGui::Button("LOST", ImVec2(50, 20))) {
+        state->status = LOST;
+    }
 
     ImGui::Separator();
 
-	ImGui::SliderFloat("Time Step", &state->time_steep, 0.1f, 1.0f);
+    ImGui::SliderFloat("Time Step", &state->time_steep, 0.1f, 1.0f);
     ImGui::Checkbox("Audio", &audio_enabled);
     //ImGui::SameLine();
     //ImGui::Checkbox("Colision cuerpo", &audio_enabled);
@@ -889,51 +889,51 @@ void draw_debug_window(Game_state *state)
 
     if (ImGui::BeginTable("body_table", 5, flags))
     {
-		// Submit columns name with TableSetupColumn() and call TableHeadersRow() to create a row with a header in each column.
-		// (Later we will show how TableSetupColumn() has other uses, optional flags, sizing weight etc.)
-		ImGui::TableSetupColumn("ID");
-		ImGui::TableSetupColumn("Type");
-		ImGui::TableSetupColumn("Position");
-		ImGui::TableSetupColumn("Direction");
-		ImGui::TableSetupColumn("Sprite");
-		ImGui::TableHeadersRow();
+        // Submit columns name with TableSetupColumn() and call TableHeadersRow() to create a row with a header in each column.
+        // (Later we will show how TableSetupColumn() has other uses, optional flags, sizing weight etc.)
+        ImGui::TableSetupColumn("ID");
+        ImGui::TableSetupColumn("Type");
+        ImGui::TableSetupColumn("Position");
+        ImGui::TableSetupColumn("Direction");
+        ImGui::TableSetupColumn("Sprite");
+        ImGui::TableHeadersRow();
 
-		//for (int row = 0; row < 6; row++)
-		for (int row = 0; row < tail_counter; row++)
-		{
-			ImGui::TableNextRow();
-			for (int column = 0; column < 5; column++)
-			{
-				ImGui::TableSetColumnIndex(column);
-				//ImGui::Text("Hello %d,%d", column, row);
+        //for (int row = 0; row < 6; row++)
+        for (int row = 0; row < tail_counter; row++)
+        {
+            ImGui::TableNextRow();
+            for (int column = 0; column < 5; column++)
+            {
+                ImGui::TableSetColumnIndex(column);
+                //ImGui::Text("Hello %d,%d", column, row);
 
-				switch(column) {
-					case 0:
-					{
-						ImGui::Text("%d", row);
-						//ImGui::Text("Hello %d,%d", column, row);
-					} break;
+                switch(column) {
+                    case 0:
+                    {
+                        ImGui::Text("%d", row);
+                        //ImGui::Text("Hello %d,%d", column, row);
+                    } break;
 
-					case 1:
-					{
-						if (row == 0)	ImGui::Text("HEAD");
-						else if (row == tail_counter - 1) ImGui::Text("TAIL");
+                    case 1:
+                    {
+                        if (row == 0)   ImGui::Text("HEAD");
+                        else if (row == tail_counter - 1) ImGui::Text("TAIL");
                         else ImGui::Text("BODY");
 
-					} break;
+                    } break;
 
-					case 2:
-					{
-						ImGui::Text("(%d, %d)", snake[row].position.x, snake[row].position.y);
-					} break;
+                    case 2:
+                    {
+                        ImGui::Text("(%d, %d)", snake[row].position.x, snake[row].position.y);
+                    } break;
 
-					case 3:
-					{
-						ImGui::Text("(%d, %d)", snake[row].direction.x, snake[row].direction.y);
-					} break;
+                    case 3:
+                    {
+                        ImGui::Text("(%d, %d)", snake[row].direction.x, snake[row].direction.y);
+                    } break;
 
-					case 4:
-					{
+                    case 4:
+                    {
                        char *sprite_names[ATLAS_SPRITE_COUNT + 1] =  {
                             "NO_TEXTURE",
                             "APPLE",
@@ -954,47 +954,47 @@ void draw_debug_window(Game_state *state)
                             "ATLAS_SPRITE_COUNT"
                         };
 
-						ImGui::Text("%s", sprite_names[snake[row].sprite]);
-					} break;
-				}
-			}
-		 }
+                        ImGui::Text("%s", sprite_names[snake[row].sprite]);
+                    } break;
+                }
+            }
+         }
 
-		ImGui::EndTable();
+        ImGui::EndTable();
     }
 
 
-	ImGui::End();
+    ImGui::End();
 }
 
 void draw_debug_overlay()
 {
-	const float DISTANCE = 10.0f;
-	static int corner = 3;
-	ImGuiIO& io = ImGui::GetIO();
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-	if (corner != -1)
-	{
-		window_flags |= ImGuiWindowFlags_NoMove;
-	    ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE);
-	    ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
-	    ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-	}
+    const float DISTANCE = 10.0f;
+    static int corner = 3;
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+    if (corner != -1)
+    {
+        window_flags |= ImGuiWindowFlags_NoMove;
+        ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE);
+        ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+    }
 
-	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-	if (ImGui::Begin("Renderer Debug overlay", &show_debug_overlay, window_flags))
-	{
-		//ImGui::Text("Simple Debug overlay\n" "(right-click to change position)");
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+    if (ImGui::Begin("Renderer Debug overlay", &show_debug_overlay, window_flags))
+    {
+        //ImGui::Text("Simple Debug overlay\n" "(right-click to change position)");
         ImGui::Text("Renderer Debug Overlay");
-	    ImGui::Separator();
+        ImGui::Separator();
 
 
-	    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-	    if (ImGui::IsMousePosValid())
-	    	ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
-	    else
-	    	ImGui::Text("Mouse Position: <invalid>");
+        if (ImGui::IsMousePosValid())
+            ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
+        else
+            ImGui::Text("Mouse Position: <invalid>");
 
 
         ImGui::Separator();
@@ -1006,18 +1006,18 @@ void draw_debug_overlay()
         //ImGui::ColorEdit3("Quads pares", &par_color[0]);
         //ImGui::ColorEdit3("Quads impares", &impar_color[0]);
 
-	    if (ImGui::BeginPopupContextWindow())
-	    {
-	    	if (ImGui::MenuItem("Custom", NULL, corner == -1)) corner = -1;
-	        if (ImGui::MenuItem("Top-left", NULL, corner == 0)) corner = 0;
-	        if (ImGui::MenuItem("Top-right", NULL, corner == 1)) corner = 1;
-	        if (ImGui::MenuItem("Bottom-left", NULL, corner == 2)) corner = 2;
-	        if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
-	        if (show_debug_overlay && ImGui::MenuItem("Close")) show_debug_overlay = false;
-	        ImGui::EndPopup();
-	    }
-	 }
-	 ImGui::End();
+        if (ImGui::BeginPopupContextWindow())
+        {
+            if (ImGui::MenuItem("Custom", NULL, corner == -1)) corner = -1;
+            if (ImGui::MenuItem("Top-left", NULL, corner == 0)) corner = 0;
+            if (ImGui::MenuItem("Top-right", NULL, corner == 1)) corner = 1;
+            if (ImGui::MenuItem("Bottom-left", NULL, corner == 2)) corner = 2;
+            if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
+            if (show_debug_overlay && ImGui::MenuItem("Close")) show_debug_overlay = false;
+            ImGui::EndPopup();
+        }
+     }
+     ImGui::End();
 }
 
 
@@ -1026,10 +1026,10 @@ void draw_debug_overlay()
 void print_gles_errors()
 {
 
-	GLuint err = glGetError();
-	if (err != GL_NO_ERROR) {
-		// Failed
-		printf("ERROR, code %u\n", err);
-		//assert(false);
-	}
+    GLuint err = glGetError();
+    if (err != GL_NO_ERROR) {
+        // Failed
+        printf("ERROR, code %u\n", err);
+        //assert(false);
+    }
 }
