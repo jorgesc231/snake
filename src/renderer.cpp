@@ -183,6 +183,10 @@ int init_batch_renderer(batch_renderer *renderer)
 #elif _WIN32
     renderer->textures[0] = texture_load("../assets/graphics/snake_atlas.png");
     renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("../src/shaders/texture.vertex", "../src/shaders/texture.fragment");
+
+#elif __EMSCRIPTEN__
+    renderer->textures[0] = texture_load("graphics/snake_atlas.png");
+    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("shaders/texture.vertex", "shaders/texture.fragment");
 #endif
     
     //renderer->textures[0] = texture_load("atlas3.png");

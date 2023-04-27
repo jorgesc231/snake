@@ -19,9 +19,11 @@
 #include <emscripten.h>
 
 #else
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
+
 #endif
 
 //#include <SDL2/SDL_opengles2.h>
@@ -34,8 +36,6 @@
 
 #include "assets_loader.h"
 #include "renderer.h"
-
-//#define DEBUG_RENDERER 1
 
 #define MAX_SND_CHANNELS 8
 
@@ -133,7 +133,7 @@ bool quit = false;
 uint32_t prev_time = SDL_GetTicks();
 
 // Our state
-bool show_demo_window = true;
+bool show_demo_window = false;
 bool show_another_window = false;
 bool show_debug_overlay = NDEBUG;    // TRUE cuando se lanza en debug mode
 
@@ -237,7 +237,7 @@ int init_engine(Game_state *state)
     }
 
 
-        // Request OpenGL ES 2.0
+    // Request OpenGL ES 2.0
     // Por alguna razon me da un contexto 3.0 (podria no funcionar en rpi1...)
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
@@ -288,13 +288,13 @@ int init_engine(Game_state *state)
 
 
     // Inicializa el renderer
-
     init_camera_2d(&state->camara, 1280, 720, glm::vec2(0, 0));
     init_batch_renderer(&state->renderer);
     print_gles_errors();
 
 
     // Inicializa el juego
+    // TODO: Deberia estar separado de la inicializacion del engine
     init_game(state);
 
     
