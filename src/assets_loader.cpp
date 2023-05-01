@@ -1,12 +1,22 @@
 // Carga de shaders, texturas, sonidos y fuentes de texto.
 
-// Cargar y compilar el shader
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
+
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_Image.h>
+#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_opengles2.h>
+
+#define ASSET_FOLDER "%s../assets/%s"
+
+// Construye la ruta hacia los assets basado en la ubicacion del ejecutable:
+char* data_path(char *path_buffer, char* base_path, const char* asset_path) 
+{
+	// TODO: Deberia cambiar dependiendo de la plataforma...
+	snprintf(path_buffer, PATH_MAX, ASSET_FOLDER, base_path, asset_path);
+    return path_buffer;
+}
 
 
 static size_t get_file_length(FILE *file)

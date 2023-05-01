@@ -61,6 +61,8 @@ static AtlasSprite DescAtlas[ATLAS_SPRITE_COUNT] = {
 };
 
 
+char* data_path(char *path_buffer, char* base_path, const char* asset_path);
+
 GLuint shaderProgLoad(const char* vertFilename, const char* fragFilename);
 
 GLuint texture_load(const char* filename);

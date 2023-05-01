@@ -39,7 +39,7 @@ struct batch {
 };
 
 
-int init_batch_renderer(batch_renderer *renderer);
+int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_path);
 
 void init_camera_2d(Camera *camera, float width, float height, glm::vec2 camera_pos);
 void init_camera_3d(Camera *camera, float FOV, float width, float height, float nearPlane, float farPlane, glm::vec3 camera_pos);
@@ -49,3 +49,5 @@ void init_camera_3d(Camera *camera, float FOV, float width, float height, float 
 //Vertex *create_quad(Vertex *target, float x, float y, int textureID);
 Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_id);
 Vertex *create_color_quad(Vertex *target, glm::vec2 position, glm::vec3 color);
+
+void print_gles_errors();

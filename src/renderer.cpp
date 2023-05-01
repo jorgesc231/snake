@@ -1,7 +1,9 @@
 // Todo el trabajo de renderizar
 
+#include <stdio.h>
 #include "renderer.h"
 
+#include "assets_loader.h"
 
 void init_camera_2d(Camera *camera, float width, float height, glm::vec2 camera_pos)
 {
@@ -170,34 +172,45 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
 
 
 
-int init_batch_renderer(batch_renderer *renderer)
+int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_path)
 {
+    // FIX: Esto esta mal...
+    char temporal_path_buffer[PATH_MAX];
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //glDisable(GL_BLEND);
 
+    // TODO: Esto no deberia estar aqui!!!!
     // Load Texture and Shaders
 #if _RPI1
-    renderer->textures[0] = texture_load("/home/jorge/eclipse_projects/snake/assets/graphics/snake_atlas.png");
-    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("/home/jorge/eclipse_projects/snake/src/shaders/texture.vertex", "/home/jorge/eclipse_projects/snake/src/shaders/texture.fragment");
+    renderer->textures[0] = texture_load(data_path(path_buffer, base_path, "graphics/snake_atlas.png"));
+    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/texture.vertex"), data_path(temporal_path_buffer, base_path, "shaders/texture.fragment"));
+    //"/home/jorge/eclipse_projects/snake/assets/graphics/snake_atlas.png"
+    //renderer->textures[0] = texture_load(data_path(path_buffer, base_path, "graphics/snake_atlas.png"));
+    //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("/home/jorge/eclipse_projects/snake/assets/shaders/texture.vertex", "/home/jorge/eclipse_projects/snake/assets/shaders/texture.fragment");
 #elif _WIN32
-    renderer->textures[0] = texture_load("../assets/graphics/snake_atlas.png");
-    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("../src/shaders/texture.vertex", "../src/shaders/texture.fragment");
+    renderer->textures[0] = texture_load(data_path(path_buffer, base_path, "graphics/snake_atlas.png"));
+    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/texture.vertex"), data_path(temporal_path_buffer, base_path, "shaders/texture.fragment"));
+    //renderer->textures[0] = texture_load("../assets/graphics/snake_atlas.png");
+    //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("../assets/shaders/texture.vertex", "../assets/shaders/texture.fragment");
+
 
 #elif __EMSCRIPTEN__
-    renderer->textures[0] = texture_load("graphics/snake_atlas.png");
-    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("shaders/texture.vertex", "shaders/texture.fragment");
+    renderer->textures[0] = texture_load("../assets/graphics/snake_atlas.png");
+    renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("../assets/shaders/texture.vertex", "../assets/shaders/texture.fragment");
+    //renderer->textures[0] = texture_load(data_path(path_buffer, base_path, "graphics/snake_atlas.png"));
+    //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/texture.vertex"), data_path(temporal_path_buffer, base_path, "shaders/texture.fragment"));
 #endif
-    
-    //renderer->textures[0] = texture_load("atlas3.png");
-    //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("texture.vertex", "texture.fragment");
 
+#if 1
     assert(renderer->textures[0]);
     assert(renderer->shaders[TEXTURE_SHADER]);
 
     glUseProgram(renderer->shaders[TEXTURE_SHADER]);
 
     glBindTexture(GL_TEXTURE_2D, renderer->textures[0]);
+#endif
     
 #if 1
     GLint texSamplerUniformLoc = glGetUniformLocation(renderer->shaders[TEXTURE_SHADER], "texSampler");
@@ -208,6 +221,7 @@ int init_batch_renderer(batch_renderer *renderer)
     glUniform1i(texSamplerUniformLoc, 0);
 #endif
     
+    #if 1
     // Sirve para saber el tamano del vertex buffer e index buffer de antemano
     const size_t MaxQuadCount = 1000;   // Cantidad maxima de quad que quiero dibujar por drawcall
     const size_t MaxVertexCount = MaxQuadCount * 4;
@@ -229,12 +243,26 @@ int init_batch_renderer(batch_renderer *renderer)
         
         offset += 4;
     }
-    
+    #endif
+
+#if 1
+    print_gles_errors();
 
     // Inicializa un vertex buffer dinamico
+
+    print_gles_errors();
+
     glGenBuffers(1, &renderer->vertex_buffer);
+
+    print_gles_errors();
+
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
+
+    print_gles_errors();
+
     glBufferData(GL_ARRAY_BUFFER, MaxVertexCount * sizeof(Vertex), NULL, GL_DYNAMIC_DRAW);
+
+    print_gles_errors();
     
     
     GLint posLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_pos");
@@ -249,19 +277,40 @@ int init_batch_renderer(batch_renderer *renderer)
     glVertexAttribPointer(colorLoc, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, r));
     glVertexAttribPointer(texLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, u));
     
+    print_gles_errors();
+
     // Inicializa el index buffer
     glGenBuffers(1, &renderer->index_buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->index_buffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, MaxIndexCount * sizeof(unsigned short), indices, GL_STATIC_DRAW);
-    
+
+    print_gles_errors();    
     
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glUseProgram(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
+#endif
+
+    print_gles_errors();
+    SDL_Log("Inicio el batch renderer");
+
+    // TODO: deberia validar errores
+    return 1;
 }
 
+
+void print_gles_errors()
+{
+
+    GLuint err = glGetError();
+    if (err != GL_NO_ERROR) {
+        // Failed
+        printf("ERROR, code %u\n", err);
+        //assert(false);
+    }
+}
 
 #if 0
 Vertex *create_quad(Vertex *target, glm::vec2 position, glm::vec2 size, float rotate, glm::vec3 color);

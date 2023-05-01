@@ -45,11 +45,13 @@
 #define OPENGL_ERROR { GLenum err = glGetError(); IM_ASSERT(err == GL_NO_ERROR); }
 void print_gles_errors();
 
+
 #if _RPI1
 #define ACTIVATE_IMGUI 0
 #else
 #define ACTIVATE_IMGUI 1
 #endif
+
 
 // TODO: Ahora respeta el limite, pero el doble...
 #define FPS 60
@@ -103,6 +105,7 @@ struct Snake {
 
 struct Game_state {
     char *base_path = NULL;
+    char assets_path_buffer[PATH_MAX];
 
     SDL_Window* window = NULL;
     SDL_GLContext context = NULL;
@@ -145,8 +148,8 @@ bool audio_loaded = false;
 bool audio_enabled = true;
 
 int init_engine(Game_state *state);
-void do_main_loop(Game_state *state);
-int shutdown_app(Game_state *state);
+void do_main_loop();
+void shutdown_app(Game_state *state);
 int init_game(Game_state *state);
 void update_snake(Snake *snake, Game_state *state);
 void game_render(Game_state *state);
@@ -154,16 +157,28 @@ void draw_debug_overlay();
 void draw_debug_window(Game_state *state);
 
 
+// Estado del juego
+Game_state state;
+
+
 int main(int argc, char* args[])
 {
-    // Estado del juego
-    Game_state state;
-
     init_engine(&state);
     
-    do_main_loop(&state);
+#ifndef __EMSCRIPTEN__
 
+    while (!quit) {
+        do_main_loop();
+    }
+    
     shutdown_app(&state);
+#endif
+
+
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(do_main_loop, 0, 0);
+#endif
+
 
     return EXIT_SUCCESS;
 }
@@ -180,18 +195,21 @@ int init_engine(Game_state *state)
         return 1;
     }
 
-    // Necesario para contruir el path hacia los assets
-    if (state->base_path = SDL_GetBasePath()) {
-        SDL_Log("base path: %s\n", SDL_GetBasePath());    
+    // Contruir el path absoluto hacia los assets
+    if ((state->base_path = SDL_GetBasePath())) {
+        SDL_Log("base path: %s\n", state->base_path);
+
     } else {
-        SDL_Log("No se pudo obtener el Base Path\n");    
+        SDL_Log("No se pudo obtener el Base Path\n");
+        // TODO: Esto deberia ser un error fatal. 
     }
 
 
     // NOTE: Esto es necesario para que SDL2 funcione con ANGLE
+    #ifndef __EMSCRIPTEN__
     SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
     //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
-
+    #endif
 
     // init SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
@@ -199,7 +217,7 @@ int init_engine(Game_state *state)
         return EXIT_FAILURE;
     }
 
-    //Initialize PNG loading
+    // Initialize PNG loading
     int imgFlags = IMG_INIT_PNG;
     if (!(IMG_Init(imgFlags) & imgFlags))
     {
@@ -229,12 +247,17 @@ int init_engine(Game_state *state)
 
         memset(sounds, 0, sizeof(Mix_Chunk*) * SND_MAX);
 
-        sounds[SND_SNAKE_EAT] = Mix_LoadWAV("../assets/sound/food.mp3");
-        sounds[SND_SNAKE_MOVE] = Mix_LoadWAV("../assets/sound/move.mp3");
-        sounds[SND_SNAKE_DIE] = Mix_LoadWAV("../assets/sound/gameover.mp3");
+        // TODO: Reportar errores si no se puede cargar el audio...
+        sounds[SND_SNAKE_EAT] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/food.mp3"));
+        //sounds[SND_SNAKE_EAT] = Mix_LoadWAV("../assets/sound/food.mp3");
+        sounds[SND_SNAKE_MOVE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/move.mp3"));
+        sounds[SND_SNAKE_DIE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/gameover.mp3"));
 
-        audio_loaded = sounds[SND_SNAKE_EAT], sounds[SND_SNAKE_MOVE], sounds[SND_SNAKE_DIE];
+        audio_loaded = sounds[SND_SNAKE_EAT] && sounds[SND_SNAKE_MOVE] && sounds[SND_SNAKE_DIE];
     }
+
+
+    SDL_Log("Inicio SDL");
 
 
     // Request OpenGL ES 2.0
@@ -274,6 +297,8 @@ int init_engine(Game_state *state)
 
     SDL_GL_MakeCurrent(state->window, state->context);
 
+
+
     SDL_GL_SetSwapInterval(0);
     
     SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
@@ -289,7 +314,8 @@ int init_engine(Game_state *state)
 
     // Inicializa el renderer
     init_camera_2d(&state->camara, 1280, 720, glm::vec2(0, 0));
-    init_batch_renderer(&state->renderer);
+    init_batch_renderer(&state->renderer, state->assets_path_buffer, state->base_path);
+
     print_gles_errors();
 
 
@@ -297,7 +323,7 @@ int init_engine(Game_state *state)
     // TODO: Deberia estar separado de la inicializacion del engine
     init_game(state);
 
-    
+
 #if ACTIVATE_IMGUI
     // Setup Dear ImGui context
     //IMGUI_CHECKVERSION();
@@ -319,14 +345,11 @@ int init_engine(Game_state *state)
     
     update_snake(snake, state);
 
-
     return success;
 }
 
-void do_main_loop(Game_state *state)
-{
-    while (!quit) {
-        
+void do_main_loop()
+{    
         // events loop
         SDL_Event event;
         
@@ -397,15 +420,15 @@ void do_main_loop(Game_state *state)
                 }
 
 
-                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state->status != LOST) state->status = PAUSED;
+                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) state.status = PAUSED;
                 
                 if (event.key.keysym.sym == SDLK_SPACE && !event.key.repeat ) {
                     
-                    if (state->status == LOST) {
-                        init_game(state);            
+                    if (state.status == LOST) {
+                        init_game(&state);            
                     }                
 
-                    state->status = PLAY;
+                    state.status = PLAY;
                 }
 
 
@@ -424,10 +447,13 @@ void do_main_loop(Game_state *state)
         uint32_t current_time = SDL_GetTicks();
         float time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
         
-
+    // NOTE: Esto no es necesario en WEB
+    #ifndef __EMSCRIPTEN__
         if (time_to_wait > 0 && time_to_wait < FRAME_TARGET_TIME) {
             SDL_Delay(time_to_wait);
+            //SDL_Log("%f", time_to_wait);
         }
+    #endif
 
         float elapsed_time = (float)(current_time - prev_time) / 1000.0f;
 
@@ -440,16 +466,16 @@ void do_main_loop(Game_state *state)
 
         // Actualizacion de estado del juego
 
-        if (tiempo > state->time_steep && state->status == PLAY) {    
+        if (tiempo > state.time_steep && state.status == PLAY) {    
 
-            update_snake(snake, state);
+            update_snake(snake, &state);
 
             // Food Collision
             if ((snake[0].position.x == food_pos.x && snake[0].position.y == food_pos.y))
             {
                 //snake[snake.counterTail].position = snakePosition[counterTail - 1];
                 tail_counter += 1;
-                state->score += 1;
+                state.score += 1;
                 food_active = false;
 
                 if (audio_enabled) Mix_PlayChannel(CH_EAT, sounds[SND_SNAKE_EAT], 0);
@@ -495,7 +521,7 @@ void do_main_loop(Game_state *state)
         }
 
 
-        if (state->status == LOST && game_over) {
+        if (state.status == LOST && game_over) {
             //init_game(&state);
             //update_snake(snake, &state);
             
@@ -506,7 +532,7 @@ void do_main_loop(Game_state *state)
 
 
         // Renderizar
-        game_render(state);
+        game_render(&state);
         print_gles_errors();
 
 #if ACTIVATE_IMGUI
@@ -521,7 +547,7 @@ void do_main_loop(Game_state *state)
 
 
         if (show_debug_overlay) {
-            draw_debug_window(state);
+            draw_debug_window(&state);
             draw_debug_overlay();
         }
 
@@ -538,13 +564,14 @@ void do_main_loop(Game_state *state)
 
 
         // Actualiza la ventana
-        SDL_GL_SwapWindow(state->window);
-    }
+        SDL_GL_SwapWindow(state.window);
+
+        //SDL_Log("Current FPS: %f", 1.0f / elapsed_time);
 }
 
 
 // TODO: Falta...
-int shutdown_app(Game_state *state)
+void shutdown_app(Game_state *my_state)
 {
 #if ACTIVATE_IMGUI
     // Cleanup
@@ -554,8 +581,8 @@ int shutdown_app(Game_state *state)
 
 #endif
 
-    SDL_GL_DeleteContext(state->context);
-    SDL_DestroyWindow(state->window);
+    SDL_GL_DeleteContext(my_state->context);
+    SDL_DestroyWindow(my_state->window);
     SDL_Quit();
 }
 
@@ -860,7 +887,12 @@ void draw_debug_window(Game_state *state)
     ImGui::Separator();
 
     ImGui::SliderFloat("Time Step", &state->time_steep, 0.1f, 1.0f);
-    ImGui::Checkbox("Audio", &audio_enabled);
+
+//    if (!audio_loaded) ImGui::BeginDisabled(true);
+        ImGui::Checkbox("Audio", &audio_enabled);
+//    if (!audio_loaded) ImGui::EndDisabled();
+
+    
     //ImGui::SameLine();
     //ImGui::Checkbox("Colision cuerpo", &audio_enabled);
     //ImGui::SameLine();
@@ -934,7 +966,7 @@ void draw_debug_window(Game_state *state)
 
                     case 4:
                     {
-                       char *sprite_names[ATLAS_SPRITE_COUNT + 1] =  {
+                       char const *sprite_names[ATLAS_SPRITE_COUNT + 1] =  {
                             "NO_TEXTURE",
                             "APPLE",
                             "TAIL_RIGHT",
@@ -1023,13 +1055,4 @@ void draw_debug_overlay()
 
 #endif
 
-void print_gles_errors()
-{
 
-    GLuint err = glGetError();
-    if (err != GL_NO_ERROR) {
-        // Failed
-        printf("ERROR, code %u\n", err);
-        //assert(false);
-    }
-}
