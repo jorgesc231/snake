@@ -26,7 +26,7 @@ jobs:
         uses: mymindstorm/setup-emsdk@v11
 
       - name: change to the web_build directory
-        run: cd web_build
+        run: cd src
 
       # Gives executions permissions to the build script
       - name: executions permissions to the build script
