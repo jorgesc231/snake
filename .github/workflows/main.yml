@@ -25,16 +25,15 @@ jobs:
       - name: Setup emsdk
         uses: mymindstorm/setup-emsdk@v11
 
-      - name: change to the web_build directory
-        run: cd src
-
       # Gives executions permissions to the build script
       - name: executions permissions to the build script
         run: chmod 700 ./build_web.sh
+        working-directory: ./src
 
       # Runs the build script
       - name: Run the build script
         run: ./build_web.sh
+        working-directory: ./src
         
       # commit the game files to github pages branch
       - name: Commit the game files to the github pages branch
