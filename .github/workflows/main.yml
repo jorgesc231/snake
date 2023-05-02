@@ -19,11 +19,11 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.5.2
 
       # Runs a single command using the runners shell
       - name: Setup emsdk
-        uses: mymindstorm/setup-emsdk@v11
+        uses: mymindstorm/setup-emsdk@v12
 
       # Gives executions permissions to the build script
       - name: executions permissions to the build script
@@ -37,7 +37,7 @@ jobs:
         
       # commit the game files to github pages branch
       - name: Commit the game files to the github pages branch
-        uses: JamesIves/github-pages-deploy-action@v4.4.0
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           BRANCH: gh-pages
           FOLDER: web_build
