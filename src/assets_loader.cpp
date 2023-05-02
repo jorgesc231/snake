@@ -8,12 +8,13 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_opengles2.h>
 
+// TODO: Deberia cambiar dependiendo de la plataforma...
 #define ASSET_FOLDER "%s../assets/%s"
 
+// NOTE: el working dir en raspberry no es el que deberia
 // Construye la ruta hacia los assets basado en la ubicacion del ejecutable:
 char* data_path(char *path_buffer, char* base_path, const char* asset_path) 
 {
-	// TODO: Deberia cambiar dependiendo de la plataforma...
 	snprintf(path_buffer, PATH_MAX, ASSET_FOLDER, base_path, asset_path);
     return path_buffer;
 }
@@ -191,11 +192,13 @@ void shaderProgDestroy(GLuint shaderProg)
 
 GLuint texture_load(const char* filename)
 {
-    // Make sure the JPEG and PNG image loaders are present
-    // (don't know what file type we'll get).
+
+// Ya esta inicializado
+#if 0
+// Windows: Los dlls de los formatos de imagenes de SDL_Image tienen que estar en la carpeta root 
     int flags = IMG_INIT_PNG;
     
-#if 1  // Windows: Los dlls de los formatos de imagenes de SDL_Image tienen que estar en la carpeta root
+
     if ((IMG_Init(flags) & flags) == 0)
     {
         // Failed

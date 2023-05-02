@@ -39,7 +39,7 @@
 
 #define MAX_SND_CHANNELS 8
 
-#define IMGUI_IMPL_OPENGL_DEBUG
+//#define IMGUI_IMPL_OPENGL_DEBUG
 #define NDEBUG 1
 
 #define OPENGL_ERROR { GLenum err = glGetError(); IM_ASSERT(err == GL_NO_ERROR); }
@@ -113,6 +113,12 @@ struct Game_state {
     Camera camara;
     batch_renderer renderer;
 
+    bool game_over = false;
+    bool quit = false;
+
+    bool audio_loaded = false;
+    bool audio_enabled = true;
+
     float time_steep = 0.0f;
     int score = 0;
     GAME_STATUS status = PAUSED;
@@ -123,7 +129,6 @@ char cwd[PATH_MAX];
 Snake snake[SNAKE_LENGTH] = {0};
 int tail_counter = 0;
 
-bool game_over = false;
 
 v2 food_pos = {10, 7};
 bool food_active = false;
@@ -132,10 +137,9 @@ Mix_Chunk* sounds[SND_MAX];
 
 Vertex vertices[4000];
 
-bool quit = false;
 uint32_t prev_time = SDL_GetTicks();
 
-// Our state
+// debug gui state
 bool show_demo_window = false;
 bool show_another_window = false;
 bool show_debug_overlay = NDEBUG;    // TRUE cuando se lanza en debug mode
@@ -144,8 +148,6 @@ glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
 glm::vec3 impar_color = DEFAULT_IMPAR_COLOR;
 glm::vec3 par_color = DEFAULT_PAR_COLOR;
 
-bool audio_loaded = false;
-bool audio_enabled = true;
 
 int init_engine(Game_state *state);
 void do_main_loop();
@@ -167,7 +169,7 @@ int main(int argc, char* args[])
     
 #ifndef __EMSCRIPTEN__
 
-    while (!quit) {
+    while (!state.quit) {
         do_main_loop();
     }
     
@@ -205,7 +207,7 @@ int init_engine(Game_state *state)
     }
 
 
-    // NOTE: Esto es necesario para que SDL2 funcione con ANGLE
+    // NOTE: Necesario para que SDL2 funcione con ANGLE
     #ifndef __EMSCRIPTEN__
     SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
     //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
@@ -253,15 +255,12 @@ int init_engine(Game_state *state)
         sounds[SND_SNAKE_MOVE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/move.mp3"));
         sounds[SND_SNAKE_DIE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/gameover.mp3"));
 
-        audio_loaded = sounds[SND_SNAKE_EAT] && sounds[SND_SNAKE_MOVE] && sounds[SND_SNAKE_DIE];
+        state->audio_loaded = sounds[SND_SNAKE_EAT] && sounds[SND_SNAKE_MOVE] && sounds[SND_SNAKE_DIE];
     }
 
 
-    SDL_Log("Inicio SDL");
-
-
     // Request OpenGL ES 2.0
-    // Por alguna razon me da un contexto 3.0 (podria no funcionar en rpi1...)
+    // Por alguna razon me da un contexto 3.0 en ANGLE
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -360,7 +359,7 @@ void do_main_loop()
 #endif
 
             if (event.type == SDL_QUIT) {
-                quit = true;
+                state.quit = true;
             }
 
             // Eventos de la ventana
@@ -392,7 +391,7 @@ void do_main_loop()
                     if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + -1 != 0) {
                         snake[0].direction = (v2){0, -1};
 
-                        if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
 
                 }
@@ -400,14 +399,14 @@ void do_main_loop()
                     if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + 1 != 0) {
                         snake[0].direction = (v2){0, 1};
 
-                        if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
                 }
                 if (event.key.keysym.sym == SDLK_RIGHT && !event.key.repeat) {
                     if (snake[0].direction.x + 1 != 0 && snake[0].direction.y + 0 != 0) {
                         snake[0].direction = (v2){1, 0};
 
-                        if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
 
                 }
@@ -415,7 +414,7 @@ void do_main_loop()
                     if (snake[0].direction.x + -1 != 0 && snake[0].direction.y + 0 != 0) {
                         snake[0].direction = (v2){-1, 0};
 
-                        if (audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
                 }
 
@@ -436,9 +435,11 @@ void do_main_loop()
                     show_debug_overlay = !show_debug_overlay;
                 }
 
+                #ifndef __EMSCRIPTEN__
                 if (event.key.keysym.sym == SDLK_F5 && !event.key.repeat) {
-                    quit = true;
+                    state.quit = true;
                 }
+                #endif
             }
         }
         
@@ -473,12 +474,11 @@ void do_main_loop()
             // Food Collision
             if ((snake[0].position.x == food_pos.x && snake[0].position.y == food_pos.y))
             {
-                //snake[snake.counterTail].position = snakePosition[counterTail - 1];
                 tail_counter += 1;
                 state.score += 1;
                 food_active = false;
 
-                if (audio_enabled) Mix_PlayChannel(CH_EAT, sounds[SND_SNAKE_EAT], 0);
+                if (state.audio_enabled) Mix_PlayChannel(CH_EAT, sounds[SND_SNAKE_EAT], 0);
             }
 
 
@@ -521,13 +521,13 @@ void do_main_loop()
         }
 
 
-        if (state.status == LOST && game_over) {
+        if (state.status == LOST && state.game_over) {
             //init_game(&state);
             //update_snake(snake, &state);
             
-            if (audio_enabled) Mix_PlayChannel(CH_GAME_OVER, sounds[SND_SNAKE_DIE], 0);
+            if (state.audio_enabled) Mix_PlayChannel(CH_GAME_OVER, sounds[SND_SNAKE_DIE], 0);
 
-            game_over = false;
+            state.game_over = false;
         }
 
 
@@ -604,13 +604,11 @@ int init_game(Game_state *state)
     snake[0].position = (v2){4, 7};
     snake[0].direction = (v2){ 1, 0 };
 
-#if 1
     for (int i = 1; i < tail_counter; i++) {
         snake[i].position.x = snake[i - 1].position.x - 1;
         snake[i].position.y = snake[i - 1].position.y;
         snake[i].direction = (v2){ 1, 0 };
     }
-#endif
 
     food_pos.x = 11;
     food_pos.y = 7;
@@ -734,7 +732,7 @@ void update_snake(Snake *snake, Game_state *state)
 #endif
 
             state->status = LOST;
-            game_over = true;
+            state->game_over = true;
         }
     }
 }
@@ -747,8 +745,7 @@ void game_render(Game_state *state)
     
     Vertex* buffer = vertices;
 
-    
-    // Draw background
+    // Draw the cells    
     bool impar = false;
 
     for (int y = 0; y < SQUARE_Y; y++)
@@ -769,6 +766,7 @@ void game_render(Game_state *state)
     }
 
 
+    // Draw the Snake
     for (int i = 0; i < tail_counter; i++) {
 
         if (snake[i].sprite != NO_TEXTURE) {
@@ -782,13 +780,12 @@ void game_render(Game_state *state)
     }
 
 
+    // Draw the Food
     buffer = create_texture_quad(buffer, food_pos.x, food_pos.y, APPLE);
     indexCount += 6;
     vertexCount += 4;
 
-    print_gles_errors();
-
-
+    
     // Set dynamic vertex buffer
     glBindBuffer(GL_ARRAY_BUFFER, state->renderer.vertex_buffer);
     glBufferSubData(GL_ARRAY_BUFFER, 0, vertexCount * sizeof(Vertex), vertices);
@@ -798,8 +795,6 @@ void game_render(Game_state *state)
     glUseProgram(state->renderer.shaders[TEXTURE_SHADER]);
     glBindTexture(GL_TEXTURE_2D, state->renderer.textures[0]);
     
-    print_gles_errors();
-
 
     //  Because multiplying matrices occurs from right to left,
     // we transform the matrix in reverse order: translate, rotate, and then scale.
@@ -825,7 +820,7 @@ void game_render(Game_state *state)
 
     print_gles_errors();
     
-    // NOTA: OpenGL ES 2.0 solo soporta indices de tipo SHORT, 3.0 soporta INT.
+    // NOTA: OpenGL ES 2.0 solo soporta indices de tipo SHORT, 3.0 soporta int.
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, NULL);
 
     print_gles_errors();
@@ -889,7 +884,7 @@ void draw_debug_window(Game_state *state)
     ImGui::SliderFloat("Time Step", &state->time_steep, 0.1f, 1.0f);
 
 //    if (!audio_loaded) ImGui::BeginDisabled(true);
-        ImGui::Checkbox("Audio", &audio_enabled);
+        ImGui::Checkbox("Audio", &state->audio_enabled);
 //    if (!audio_loaded) ImGui::EndDisabled();
 
     
@@ -943,7 +938,6 @@ void draw_debug_window(Game_state *state)
                     case 0:
                     {
                         ImGui::Text("%d", row);
-                        //ImGui::Text("Hello %d,%d", column, row);
                     } break;
 
                     case 1:
@@ -1016,7 +1010,6 @@ void draw_debug_overlay()
     ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
     if (ImGui::Begin("Renderer Debug overlay", &show_debug_overlay, window_flags))
     {
-        //ImGui::Text("Simple Debug overlay\n" "(right-click to change position)");
         ImGui::Text("Renderer Debug Overlay");
         ImGui::Separator();
 

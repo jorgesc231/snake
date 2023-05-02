@@ -33,12 +33,6 @@ struct batch_renderer {
     GLuint index_buffer;
 };
 
-struct batch {
-    GLuint vertex_buffer;
-    GLuint index_buffer;
-};
-
-
 int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_path);
 
 void init_camera_2d(Camera *camera, float width, float height, glm::vec2 camera_pos);
