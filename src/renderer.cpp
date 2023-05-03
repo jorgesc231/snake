@@ -99,10 +99,10 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->x = x;
     target->y = y;
     
-    target->r = 255;
-    target->g = 255;
-    target->b = 255;
-    target->a = 255;
+    target->r = 1.0f;
+    target->g = 1.0f;
+    target->b = 1.0f;
+    target->a = 1.0f;
     
     //target->u = 0.0f;
     //target->v = 0.0f;
@@ -116,10 +116,10 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->x = x + size;
     target->y = y;
     
-    target->r = 255;
-    target->g = 255;
-    target->b = 255;
-    target->a = 255;
+    target->r = 1.0f;
+    target->g = 1.0f;
+    target->b = 1.0f;
+    target->a = 1.0f;
     
     //target->u = 1.0f;
     //target->v = 0.0f;
@@ -133,10 +133,10 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->x = x + size;
     target->y = y + size;
     
-    target->r = 255;
-    target->g = 255;
-    target->b = 255;
-    target->a = 255;
+    target->r = 1.0f;
+    target->g = 1.0f;
+    target->b = 1.0f;
+    target->a = 1.0f;
     
     //target->u = 1.0f;
     //target->v = 1.0f;
@@ -150,10 +150,10 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->x = x;
     target->y = y + size;
     
-    target->r = 255;
-    target->g = 255;
-    target->b = 255;
-    target->a = 255;
+    target->r = 1.0f;
+    target->g = 1.0f;
+    target->b = 1.0f;
+    target->a = 1.0f;
     
     //target->u = 0.0f;
     //target->v = 1.0f;
@@ -238,7 +238,7 @@ int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_
     glEnableVertexAttribArray(texLoc);
     
     glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
-    glVertexAttribPointer(colorLoc, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, r));
+    glVertexAttribPointer(colorLoc, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, r));
     glVertexAttribPointer(texLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, u));
     
 

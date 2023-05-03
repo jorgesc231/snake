@@ -13,9 +13,9 @@ enum _shaders {
 };
 
 typedef struct Vertex_s {
-	float x, y;	// position
-	uint8_t r, g, b, a;
-	float u, v;	// texCoord
+    float x, y;            // position
+    float r, g, b, a;      // color
+    float u, v;            // texCoord
 } Vertex;
 
 struct Camera {

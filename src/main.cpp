@@ -13,7 +13,7 @@
 #ifdef __EMSCRIPTEN__
 #include <SDL.h>
 #include <SDL_image.h>
-#include <SDL_ttf.h>
+//#include <SDL_ttf.h>
 #include <SDL_mixer.h>
 
 #include <emscripten.h>
@@ -65,8 +65,12 @@ void print_gles_errors();
 #define SQUARE_SIZE 40
 
 #define DEFAULT_TIMESTEEP 0.15f
-#define DEFAULT_IMPAR_COLOR glm::vec3(170, 215, 81)
-#define DEFAULT_PAR_COLOR glm::vec3(162, 209, 73)
+
+// Colores
+//#define DEFAULT_CELL_COLOR1 glm::vec3(0.68f, 0.84f, 0.27f)
+//#define DEFAULT_CELL_COLOR2 glm::vec3(0.65f, 0.82f, 0.24f)
+#define DEFAULT_CELL_COLOR1 glm::vec3(0.67f, 0.84f, 0.32f)
+#define DEFAULT_CELL_COLOR2 glm::vec3(0.64f, 0.82f, 0.29f)
 
 
 const unsigned int DISP_WIDTH = 1280;
@@ -146,8 +150,8 @@ bool show_another_window = false;
 bool show_debug_overlay = NDEBUG;    // TRUE cuando se lanza en debug mode
 
 glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
-glm::vec3 impar_color = DEFAULT_IMPAR_COLOR;
-glm::vec3 par_color = DEFAULT_PAR_COLOR;
+glm::vec3 cell_color1 = DEFAULT_CELL_COLOR1;
+glm::vec3 cell_color2 = DEFAULT_CELL_COLOR2;
 
 
 int init_engine(Game_state *state);
@@ -268,8 +272,7 @@ int init_engine(Game_state *state)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
+
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -333,8 +336,8 @@ int init_engine(Game_state *state)
         memset(sounds, 0, sizeof(Mix_Chunk*) * SND_MAX);
 
         // TODO: Reportar errores si no se puede cargar el audio...
-        sounds[SND_SNAKE_EAT] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/food.mp3"));
         //sounds[SND_SNAKE_EAT] = Mix_LoadWAV("../assets/sound/food.mp3");
+        sounds[SND_SNAKE_EAT] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/food.mp3"));
         sounds[SND_SNAKE_MOVE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/move.mp3"));
         sounds[SND_SNAKE_DIE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/gameover.mp3"));
 
@@ -353,9 +356,6 @@ int init_engine(Game_state *state)
     // Inicializa el juego
     // TODO: Deberia estar separado de la inicializacion del engine
     init_game(state);
-
-
-
 
     print_gles_errors();
     
@@ -463,17 +463,16 @@ void do_main_loop()
 
         
         // The code calculates the elapsedTime in seconds since the last time this code was executed.
-        // Animate
         uint32_t current_time = SDL_GetTicks();
         float time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
         
-    // NOTE: Esto no es necesario en WEB
-    #ifndef __EMSCRIPTEN__
+        // NOTE: Esto no es necesario en WEB
+        #ifndef __EMSCRIPTEN__
         if (time_to_wait > 0 && time_to_wait < FRAME_TARGET_TIME) {
             SDL_Delay(time_to_wait);
             //SDL_Log("%f", time_to_wait);
         }
-    #endif
+        #endif
 
         float elapsed_time = (float)(current_time - prev_time) / 1000.0f;
 
@@ -769,18 +768,18 @@ void game_render(Game_state *state)
     Vertex* buffer = vertices;
 
     // Draw the cells    
-    bool impar = false;
+    bool cambiar = false;
 
     for (int y = 0; y < SQUARE_Y; y++)
     {
         for (int x = 0; x < SQUARE_X; x++)
         {
-            if (impar) {
-                buffer = create_color_quad(buffer, glm::vec2(x, y), impar_color);
-                impar = false;
+            if (cambiar) {
+                buffer = create_color_quad(buffer, glm::vec2(x, y), cell_color2);
+                cambiar = false;
             } else {
-                buffer = create_color_quad(buffer, glm::vec2(x, y), par_color);
-                impar = true;
+                buffer = create_color_quad(buffer, glm::vec2(x, y), cell_color1);
+                cambiar = true;
             }
 
             indexCount += 6;
@@ -1048,11 +1047,8 @@ void draw_debug_overlay()
         ImGui::Separator();
 
         ImGui::ColorEdit3("Background##2f", &clear_color[0], ImGuiColorEditFlags_Float);
-
-        // NOTA: Por alguna razon que no recuerdo decidi usar los colores como enteros en el renderer...
-        //static glm::vec3 color = glm::vec3(par_color.r / 255.0f, par_color.g / 255.0f, par_color.b / 255.0f);
-        //ImGui::ColorEdit3("Quads pares", &par_color[0]);
-        //ImGui::ColorEdit3("Quads impares", &impar_color[0]);
+        ImGui::ColorEdit3("Cells 1##2f", &cell_color1[0], ImGuiColorEditFlags_Float);
+        ImGui::ColorEdit3("Cells 2##2f", &cell_color2[0], ImGuiColorEditFlags_Float);
 
         if (ImGui::BeginPopupContextWindow())
         {
