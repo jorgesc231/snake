@@ -46,6 +46,7 @@
 void print_gles_errors();
 
 
+// TODO: Por ahora imgui no funciona en la raspberry pi 1 B+
 #if _RPI1
 #define ACTIVATE_IMGUI 0
 #else
@@ -208,16 +209,98 @@ int init_engine(Game_state *state)
 
 
     // NOTE: Necesario para que SDL2 funcione con ANGLE
-    #ifndef __EMSCRIPTEN__
+    #if !defined(__EMSCRIPTEN__) || !defined(_RPI1)
     SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
     //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
     #endif
 
     // init SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_AUDIO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) < 0) {
         SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return EXIT_FAILURE;
     }
+
+
+    // Request OpenGL ES 2.0
+    // Por alguna razon me da un contexto 3.0 con ANGLE
+    const char* glsl_version = "#version 100";
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    
+    // Want double-buffering
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    //SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+
+
+    // Create the window
+    state->window = SDL_CreateWindow("Snake2D - SDL2 + GLES2", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, DISP_WIDTH, DISP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+
+    if (!state->window)
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the main window.", NULL);
+        return EXIT_FAILURE;
+    }
+
+    // Create OpenGL context
+    state->context = SDL_GL_CreateContext(state->window);
+    
+    if (!state->context)
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the OpenGL context.", NULL);
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "[SDL] GL context creation failed!");
+        return EXIT_FAILURE;
+    }
+
+    SDL_GL_MakeCurrent(state->window, state->context);
+
+    SDL_GL_SetSwapInterval(0);
+
+
+#if ACTIVATE_IMGUI
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = true;
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL2_InitForOpenGL(state->window, state->context);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    #ifdef __EMSCRIPTEN__
+    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
+    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
+    io.IniFilename = nullptr;
+    #endif
+#endif
+
+    
+    SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
+    SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
+    SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
+
+    // Permite redimensionar la ventana
+    SDL_SetWindowResizable(state->window, SDL_TRUE);
+    SDL_SetWindowMinimumSize(state->window, 960, 540);
+
+    glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
+
+#ifdef _RPI1
+    if (SDL_ShowCursor(SDL_DISABLE));
+#endif
+
 
     // Initialize PNG loading
     int imgFlags = IMG_INIT_PNG;
@@ -259,57 +342,6 @@ int init_engine(Game_state *state)
     }
 
 
-    // Request OpenGL ES 2.0
-    // Por alguna razon me da un contexto 3.0 en ANGLE
-    const char* glsl_version = "#version 100";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-    
-    // Want double-buffering
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-
-
-    // Create the window
-    state->window = SDL_CreateWindow("Snake2D - SDL2 + GLES2", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, DISP_WIDTH, DISP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-
-    if (!state->window)
-    {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the main window.", NULL);
-        return EXIT_FAILURE;
-    }
-
-    // Create OpenGL context
-    state->context = SDL_GL_CreateContext(state->window);
-    
-    if (!state->context)
-    {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the OpenGL context.", NULL);
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "[SDL] GL context creation failed!");
-        return EXIT_FAILURE;
-    }
-
-    SDL_GL_MakeCurrent(state->window, state->context);
-
-
-
-    SDL_GL_SetSwapInterval(0);
-    
-    SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
-    SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
-    SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
-
-    // Permite redimensionar la ventana
-    SDL_SetWindowResizable(state->window, SDL_TRUE);
-    SDL_SetWindowMinimumSize(state->window, 960, 540);
-
-    glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
-
 
     // Inicializa el renderer
     init_camera_2d(&state->camara, 1280, 720, glm::vec2(0, 0));
@@ -323,22 +355,7 @@ int init_engine(Game_state *state)
     init_game(state);
 
 
-#if ACTIVATE_IMGUI
-    // Setup Dear ImGui context
-    //IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(state->window, state->context);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-#endif
 
     print_gles_errors();
     
@@ -352,7 +369,7 @@ void do_main_loop()
         // events loop
         SDL_Event event;
         
-        while(SDL_PollEvent(&event) != 0) {
+        while(SDL_PollEvent(&event)) {
 
 #if ACTIVATE_IMGUI
             ImGui_ImplSDL2_ProcessEvent(&event);
@@ -442,6 +459,8 @@ void do_main_loop()
                 #endif
             }
         }
+
+
         
         // The code calculates the elapsedTime in seconds since the last time this code was executed.
         // Animate
@@ -551,11 +570,15 @@ void do_main_loop()
             draw_debug_overlay();
         }
 
+
+        print_gles_errors();
         
 
         // Rendering
         ImGui::Render();
-        //glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        ImGuiIO& io = ImGui::GetIO();
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        //glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 #endif
 
