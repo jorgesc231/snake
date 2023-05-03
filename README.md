@@ -14,6 +14,7 @@ Ejemplo de como desarrollar un juego usando **OpenGL ES 2** para multiples plata
 - **Escape** -> Pausa
 - **Flechas de direccion** -> Controlar la serpiente
 - **F1** -> Abrir/Cerrar menu de depuración
+- **F5** -> Cierra el juego
 
 
 ## Compilar
@@ -41,12 +42,12 @@ Ejemplo de como desarrollar un juego usando **OpenGL ES 2** para multiples plata
 
 ## TODO
 
-- Renderizar texto
-- pasar los colores de los quads a float
-- port rpi1 y linux
-- port android
+- Ordenar el codigo
+- Subir proyecto de Eclipse
+- Port android
 - Bug de chocar consigo mismo si se aprietan dos direcciones muy rapido
-- Aspect ratio
 - Corregir el bloqueo de FPS
+- Renderizar texto
+- Aspect ratio
 - Mejora en el procesamiento de entrada
 - Optimizacion

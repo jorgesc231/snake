@@ -282,11 +282,11 @@ int init_engine(Game_state *state)
     ImGui_ImplSDL2_InitForOpenGL(state->window, state->context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    #ifdef __EMSCRIPTEN__
+    //#ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
     // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
     io.IniFilename = nullptr;
-    #endif
+    //#endif
 #endif
 
     
