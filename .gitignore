@@ -1,0 +1,4 @@
+/ARM_Debug/
+/x86_Debug/
+/win_x86_Release/
+*.exe
