@@ -50,7 +50,65 @@ Esto generará el ejecutable del juego llamado: **snake_win32.exe**.
 
 ### WebAssembly
 
-(Por hacer...)
+#### en Windows
+
+Instalar el SDK de Emscripten:
+
+[https://emscripten.org/]()
+
+y seguir el tutorial de instalacion.
+
+Abrir la terminal de Windows en la carpeta donde se descargo **emsdk** y ejecutar el siguiente archivo:
+
+```
+emsdk_env.bat
+```
+
+Para colocar el compilador el path.
+
+Ir a la carpeta **web_build** que esta en el repositorio y ejecutar:
+
+
+```
+build_web.bat
+```
+
+Se puede ejecutar de forma local con el comando:
+
+
+```
+emrun index.html
+```
+
+
+#### en Linux
+
+
+Instalar el SDK de Emscripten:
+
+[https://emscripten.org/]()
+
+Abrir la terminal en el directorio del **emsdk** y ejecutar el siguiente archivo:
+
+```
+emsdk_env.sh
+```
+
+Para colocar el compilador el path.
+
+Ir a la carpeta **web_build** que esta en el repositorio y ejecutar:
+
+
+```
+build_web.sh
+```
+
+Se puede ejecutar de forma local con el comando:
+
+
+```
+emrun index.html
+```
 
 ### Raspberry Pi
 
