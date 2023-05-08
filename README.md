@@ -28,6 +28,8 @@ Instalar:
 
 **Asegurarse de instalar *gcc* siguiendo el tutorial de la pagina**.
 
+*Las dependencias estan en el repositorio del proyecto.*
+
 Desde la terminal de *msys2* ir a la carpeta win32_build del proyecto y ejecutar el script:
 
 ```
@@ -44,19 +46,20 @@ Esto generará el ejecutable del juego llamado: **snake_win32.exe**.
 
 (Por hacer...)
 
+
 ### Android
 
 (Por hacer...)
 
 ### WebAssembly
 
-#### en Windows
+##### en Windows
 
 Instalar el SDK de Emscripten:
 
 [https://emscripten.org/]()
 
-y seguir el tutorial de instalacion.
+y seguir el tutorial de instalación.
 
 Abrir la terminal de Windows en la carpeta donde se descargo **emsdk** y ejecutar el siguiente archivo:
 
@@ -81,7 +84,7 @@ emrun index.html
 ```
 
 
-#### en Linux
+##### en Linux
 
 
 Instalar el SDK de Emscripten:
@@ -112,7 +115,23 @@ emrun index.html
 
 ### Raspberry Pi
 
-(Por hacer...)
+**Para la Raspberry Pi 1 B+, en las versiones mas nuevas deberia funciona con el SDL2 que viene en los repositorios.**
+
+Seguir el tutorial para compilar SDL2 para Raspberry Pi: 
+
+[https://github.com/jorgesc231/tutoriales_raspberry_pi/tree/master/sdl2_gles2_rpi1]()
+
+*Comprobar que el ejemplo con OpenGL ES funcione correctamente.*
+
+Una vez completado, en la misma terminal ir a la carpeta **src/** del repositorio del juego y ejecutar:
+
+```
+build_rpi1.bat
+```
+
+Deberia ejecutar el binario para la Raspberry Pi, traspasarlo usando **scp** y ejecutarlo.
+
+*NOTA: Por ahora dear imgui no funciona en Raspberry pi.*
 
 
 ## TODO
