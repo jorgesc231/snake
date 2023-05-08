@@ -21,7 +21,24 @@ Ejemplo de como desarrollar un juego usando **OpenGL ES 2** para multiples plata
 
 ### Windows
 
-(Por hacer...)
+Instalar:
+
+[https://www.msys2.org/]()
+
+
+**Asegurarse de instalar *gcc* siguiendo el tutorial de la pagina**.
+
+Desde la terminal de *msys2* ir a la carpeta win32_build del proyecto y ejecutar el script:
+
+```
+build_win32.bat
+```
+
+Esto generará el ejecutable del juego llamado: **snake_win32.exe**.
+
+*Depende de los dlls que estan en la carpeta para ejecutarse.*
+
+
 
 ### Linux
 
