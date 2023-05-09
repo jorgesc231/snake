@@ -2,3 +2,4 @@
 /x86_Debug/
 /win_x86_Release/
 *.exe
+/win_x86_Debug/

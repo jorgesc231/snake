@@ -40,7 +40,6 @@
 #define MAX_SND_CHANNELS 8
 
 //#define IMGUI_IMPL_OPENGL_DEBUG
-#define NDEBUG 1
 
 #define OPENGL_ERROR { GLenum err = glGetError(); IM_ASSERT(err == GL_NO_ERROR); }
 void print_gles_errors();
@@ -147,7 +146,7 @@ uint32_t prev_time = SDL_GetTicks();
 // debug gui state
 bool show_demo_window = false;
 bool show_another_window = false;
-bool show_debug_overlay = NDEBUG;    // TRUE cuando se lanza en debug mode
+bool show_debug_overlay = true;    // TRUE cuando se lanza en debug mode
 
 glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
 glm::vec3 cell_color1 = DEFAULT_CELL_COLOR1;

@@ -8,8 +8,13 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_opengles2.h>
 
+#ifdef NDEBUG
 // TODO: Deberia cambiar dependiendo de la plataforma...
 #define ASSET_FOLDER "%s../assets/%s"
+#else
+// Release
+#define ASSET_FOLDER "%sassets/%s"
+#endif
 
 // NOTE: el working dir en raspberry no es el que deberia
 // Construye la ruta hacia los assets basado en la ubicacion del ejecutable:
