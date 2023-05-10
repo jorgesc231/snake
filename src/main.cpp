@@ -63,7 +63,7 @@ void print_gles_errors();
 #define SQUARE_Y 15
 #define SQUARE_SIZE 40
 
-#define DEFAULT_TIMESTEEP 0.15f
+#define DEFAULT_TIMESTEP 0.15f
 
 // Colores
 //#define DEFAULT_CELL_COLOR1 glm::vec3(0.68f, 0.84f, 0.27f)
@@ -123,7 +123,7 @@ struct Game_state {
     bool audio_loaded = false;
     bool audio_enabled = true;
 
-    float time_steep = 0.0f;
+    float time_step = DEFAULT_TIMESTEP;
     int score = 0;
     GAME_STATUS status = PAUSED;
 };
@@ -192,6 +192,9 @@ int main(int argc, char* args[])
 
 int init_engine(Game_state *state)
 {
+    // Inicializa el generador de numeros aleatorios
+    srand(time(0));
+    
     bool success = false;
 
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
@@ -484,7 +487,7 @@ void do_main_loop()
 
         // Actualizacion de estado del juego
 
-        if (tiempo > state.time_steep && state.status == PLAY) {    
+        if (tiempo > state.time_step && state.status == PLAY) {    
 
             update_snake(snake, &state);
 
@@ -609,9 +612,6 @@ void shutdown_app(Game_state *my_state)
 
 int init_game(Game_state *state)
 {
-    srand(time(0));
-
-    state->time_steep = DEFAULT_TIMESTEEP;
     state->score = 0;
     state->status = PAUSED;
 
@@ -902,7 +902,7 @@ void draw_debug_window(Game_state *state)
 
     ImGui::Separator();
 
-    ImGui::SliderFloat("Time Step", &state->time_steep, 0.1f, 1.0f);
+    ImGui::SliderFloat("Time Step", &state->time_step, 0.1f, 1.0f);
 
 //    if (!audio_loaded) ImGui::BeginDisabled(true);
         ImGui::Checkbox("Audio", &state->audio_enabled);
