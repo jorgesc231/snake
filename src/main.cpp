@@ -641,120 +641,120 @@ int init_game(Game_state *state)
 
 void update_snake(Snake *snake, Game_state *state) 
 {
+    // Deteccion de colisiones
+    if (snake[0].position.x >= 0 && snake[0].position.y >= 0 && snake[0].position.x <= SQUARE_X - 1 && snake[0].position.y <= SQUARE_Y - 1) {
 
-    for (int i = tail_counter - 1; i >= 0; i--) {
+        for (int i = tail_counter - 1; i >= 0; i--) {
 
-        // Cabeza
-        if (i == 0) {
-
-            if (snake[i].direction.x == 1 && snake[i].direction.y == 0) {
-                snake[i].sprite = HEAD_RIGHT;
-            }
-
-            if (snake[i].direction.x == -1 && snake[i].direction.y == 0) {
-                snake[i].sprite = HEAD_LEFT;
-            }
-
-            if (snake[i].direction.x == 0 && snake[i].direction.y == 1) {
-                snake[i].sprite = HEAD_DOWN;
-            }
-
-            if (snake[i].direction.x == 0 && snake[i].direction.y == -1) {
-                snake[i].sprite = HEAD_UP;
-            }
-        }
-        else {
-
-            // TODO: en el caso de la cola lee memoria anterior
-            snake[i].position = snake[i - 1].position;
-            snake[i].direction = snake[i - 1].direction;
-
-            // Cola
-            if (i == tail_counter - 1) {
-            
-                if (snake[i].direction.x == 0 && snake[i].direction.y == -1) {
-                   snake[i].sprite = TAIL_DOWN;
-                }
-
-                if (snake[i].direction.x == 0 && snake[i].direction.y == 1) {
-                   snake[i].sprite = TAIL_UP;
-                }
+            // Cabeza
+            if (i == 0) {
 
                 if (snake[i].direction.x == 1 && snake[i].direction.y == 0) {
-                   snake[i].sprite = TAIL_LEFT;
+                    snake[i].sprite = HEAD_RIGHT;
                 }
 
                 if (snake[i].direction.x == -1 && snake[i].direction.y == 0) {
-                   snake[i].sprite = TAIL_RIGHT;
+                    snake[i].sprite = HEAD_LEFT;
                 }
 
-            // Cuerpo
-            } else {
-
-
-                if (snake[i].direction.x == 0 && (snake[i].direction.y == -1 || snake[i].direction.y == 1)) {
-                   snake[i].sprite = BODY_VERTICAL;
+                if (snake[i].direction.x == 0 && snake[i].direction.y == 1) {
+                    snake[i].sprite = HEAD_DOWN;
                 }
 
-                if (snake[i].direction.y == 0 && (snake[i].direction.x == -1 || snake[i].direction.x == 1)) {
-                   snake[i].sprite = BODY_HORIZONTAL;
+                if (snake[i].direction.x == 0 && snake[i].direction.y == -1) {
+                    snake[i].sprite = HEAD_UP;
                 }
+            }
+            else {
 
-                if ((snake[i].direction.x == 0 && snake[i].direction.y == 1) && (snake[i + 1].direction.x == 1 && snake[i + 1].direction.y == 0)) {
-                    snake[i].sprite = BODY_BOTTOMLEFT;   
+                // TODO: en el caso de la cola lee memoria anterior
+                snake[i].position = snake[i - 1].position;
+                snake[i].direction = snake[i - 1].direction;
+
+                // Cola
+                if (i == tail_counter - 1) {
+                
+                    if (snake[i].direction.x == 0 && snake[i].direction.y == -1) {
+                       snake[i].sprite = TAIL_DOWN;
+                    }
+
+                    if (snake[i].direction.x == 0 && snake[i].direction.y == 1) {
+                       snake[i].sprite = TAIL_UP;
+                    }
+
+                    if (snake[i].direction.x == 1 && snake[i].direction.y == 0) {
+                       snake[i].sprite = TAIL_LEFT;
+                    }
+
+                    if (snake[i].direction.x == -1 && snake[i].direction.y == 0) {
+                       snake[i].sprite = TAIL_RIGHT;
+                    }
+
+                // Cuerpo
+                } else {
+
+                    if (snake[i].direction.x == 0 && (snake[i].direction.y == -1 || snake[i].direction.y == 1)) {
+                       snake[i].sprite = BODY_VERTICAL;
+                    }
+
+                    if (snake[i].direction.y == 0 && (snake[i].direction.x == -1 || snake[i].direction.x == 1)) {
+                       snake[i].sprite = BODY_HORIZONTAL;
+                    }
+
+                    if ((snake[i].direction.x == 0 && snake[i].direction.y == 1) && (snake[i + 1].direction.x == 1 && snake[i + 1].direction.y == 0)) {
+                        snake[i].sprite = BODY_BOTTOMLEFT;   
+                    }
+
+                    if ((snake[i].direction.x == 1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == 1)) {
+                        snake[i].sprite = BODY_TOPRIGHT;   
+                    }
+
+                    if ((snake[i].direction.x == -1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == 1)) {
+                        snake[i].sprite = BODY_TOPLEFT;   
+                    }
+
+                    if ((snake[i].direction.x == 0 && snake[i].direction.y == -1) && (snake[i + 1].direction.x == 1 && snake[i + 1].direction.y == 0)) {
+                        snake[i].sprite = BODY_TOPLEFT;   
+                    }
+
+                    if ((snake[i].direction.x == 0 && snake[i].direction.y == -1) && (snake[i + 1].direction.x == -1 && snake[i + 1].direction.y == 0)) {
+                        snake[i].sprite = BODY_TOPRIGHT;   
+                    }
+
+                    if ((snake[i].direction.x == 1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == -1)) {
+                        snake[i].sprite = BODY_BOTTOMRIGHT;   
+                    }
+
+                    if ((snake[i].direction.x == -1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == -1)) {
+                        snake[i].sprite = BODY_BOTTOMLEFT;   
+                    }
+
+                    if ((snake[i].direction.x == 0 && snake[i].direction.y == 1) && (snake[i + 1].direction.x == -1 && snake[i + 1].direction.y == 0)) {
+                        snake[i].sprite = BODY_BOTTOMRIGHT;   
+                    }
+
                 }
+            }
 
-                if ((snake[i].direction.x == 1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == 1)) {
-                    snake[i].sprite = BODY_TOPRIGHT;   
-                }
+        }
 
-                if ((snake[i].direction.x == -1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == 1)) {
-                    snake[i].sprite = BODY_TOPLEFT;   
-                }
+        snake[0].position.x += snake[0].direction.x;
+        snake[0].position.y += snake[0].direction.y;
 
-                if ((snake[i].direction.x == 0 && snake[i].direction.y == -1) && (snake[i + 1].direction.x == 1 && snake[i + 1].direction.y == 0)) {
-                    snake[i].sprite = BODY_TOPLEFT;   
-                }
+        for (int i = 1; i < tail_counter; i++) {
+            if (snake[0].position.x == snake[i].position.x && snake[0].position.y == snake[i].position.y) {
+                
+    #if NDEBUG
+                SDL_Log("Colision con el seg: %d", i);
+    #endif
 
-                if ((snake[i].direction.x == 0 && snake[i].direction.y == -1) && (snake[i + 1].direction.x == -1 && snake[i + 1].direction.y == 0)) {
-                    snake[i].sprite = BODY_TOPRIGHT;   
-                }
-
-                if ((snake[i].direction.x == 1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == -1)) {
-                    snake[i].sprite = BODY_BOTTOMRIGHT;   
-                }
-
-                if ((snake[i].direction.x == -1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == -1)) {
-                    snake[i].sprite = BODY_BOTTOMLEFT;   
-                }
-
-                if ((snake[i].direction.x == 0 && snake[i].direction.y == 1) && (snake[i + 1].direction.x == -1 && snake[i + 1].direction.y == 0)) {
-                    snake[i].sprite = BODY_BOTTOMRIGHT;   
-                }
-
+                state->status = LOST;
+                state->game_over = true;
             }
         }
-
-    }
-
-    snake[0].position.x += snake[0].direction.x;
-    snake[0].position.y += snake[0].direction.y;
-
-    if (snake[0].position.y > SQUARE_Y - 1) {snake[0].position.y = SQUARE_Y - 1; state->status = LOST;}
-    if (snake[0].position.x > SQUARE_X - 1) {snake[0].position.x = SQUARE_X - 1; state->status = LOST;}
-    if (snake[0].position.x < 0) {snake[0].position.x = 0; state->status = LOST;}
-    if (snake[0].position.y < 0) {snake[0].position.y = 0; state->status = LOST;}
-
-    for (int i = 1; i < tail_counter; i++) {
-        if (snake[0].position.x == snake[i].position.x && snake[0].position.y == snake[i].position.y) {
-            
-#if NDEBUG
-            SDL_Log("Colision con el seg: %d", i);
-#endif
-
-            state->status = LOST;
-            state->game_over = true;
-        }
+    } else {
+        state->status = LOST; 
+        state->game_over = true;
     }
 }
 
