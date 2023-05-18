@@ -66,14 +66,12 @@ void print_gles_errors();
 #define DEFAULT_TIMESTEP 0.15f
 
 // Colores
-//#define DEFAULT_CELL_COLOR1 glm::vec3(0.68f, 0.84f, 0.27f)
-//#define DEFAULT_CELL_COLOR2 glm::vec3(0.65f, 0.82f, 0.24f)
 #define DEFAULT_CELL_COLOR1 glm::vec3(0.67f, 0.84f, 0.32f)
 #define DEFAULT_CELL_COLOR2 glm::vec3(0.64f, 0.82f, 0.29f)
 
 
-const unsigned int DISP_WIDTH = 1280;
-const unsigned int DISP_HEIGHT = 720;
+uint32_t DISP_WIDTH = 1280;
+uint32_t DISP_HEIGHT = 720;
 
 enum GAME_STATUS {
     PLAY,
@@ -98,7 +96,7 @@ enum
 };
 
 struct v2 {
-    int x, y;
+    int32_t x, y;
 };
 
 struct Snake {
@@ -124,14 +122,14 @@ struct Game_state {
     bool audio_enabled = true;
 
     float time_step = DEFAULT_TIMESTEP;
-    int score = 0;
+    int32_t score = 0;
     GAME_STATUS status = PAUSED;
 };
 
 char cwd[PATH_MAX];
 
 Snake snake[SNAKE_LENGTH] = {0};
-int tail_counter = 0;
+int32_t tail_counter = 0;
 
 
 v2 food_pos = {10, 7};
@@ -146,17 +144,17 @@ uint32_t prev_time = SDL_GetTicks();
 // debug gui state
 bool show_demo_window = false;
 bool show_another_window = false;
-bool show_debug_overlay = true;    // TRUE cuando se lanza en debug mode
+bool show_debug_overlay = true;    
 
 glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
 glm::vec3 cell_color1 = DEFAULT_CELL_COLOR1;
 glm::vec3 cell_color2 = DEFAULT_CELL_COLOR2;
 
 
-int init_engine(Game_state *state);
+uint32_t init_engine(Game_state *state);
 void do_main_loop();
 void shutdown_app(Game_state *state);
-int init_game(Game_state *state);
+uint32_t init_game(Game_state *state);
 void update_snake(Snake *snake, Game_state *state);
 void game_render(Game_state *state);
 void draw_debug_overlay();
@@ -190,7 +188,7 @@ int main(int argc, char* args[])
 }
 
 
-int init_engine(Game_state *state)
+uint32_t init_engine(Game_state *state)
 {
     // Inicializa el generador de numeros aleatorios
     srand(time(0));
@@ -240,7 +238,7 @@ int init_engine(Game_state *state)
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    //SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
 
     // Create the window
@@ -278,7 +276,6 @@ int init_engine(Game_state *state)
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(state->window, state->context);
@@ -308,7 +305,7 @@ int init_engine(Game_state *state)
 
 
     // Initialize PNG loading
-    int imgFlags = IMG_INIT_PNG;
+    uint32_t imgFlags = IMG_INIT_PNG;
     if (!(IMG_Init(imgFlags) & imgFlags))
     {
         printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
@@ -319,8 +316,8 @@ int init_engine(Game_state *state)
     }
 
     // Inicializa SDL_Mixer
-    int flags = MIX_INIT_MP3;
-    int initted = Mix_Init (flags);
+    uint32_t flags = MIX_INIT_MP3;
+    uint32_t initted = Mix_Init (flags);
     if ((initted & flags) != flags)
     {
         fprintf(stderr, "Error al inicializar SDL_Mix: %s\n", Mix_GetError());
@@ -368,7 +365,6 @@ int init_engine(Game_state *state)
 
 void do_main_loop()
 {    
-        // events loop
         SDL_Event event;
         
         while(SDL_PollEvent(&event)) {
@@ -407,7 +403,7 @@ void do_main_loop()
 
             if (event.type == SDL_KEYDOWN ) {
                 if (event.key.keysym.sym == SDLK_UP && !event.key.repeat) {
-                    if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + -1 != 0) {
+                    if (snake[0].direction.x != 0 && snake[0].direction.y != 1) {
                         snake[0].direction = (v2){0, -1};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
@@ -415,14 +411,14 @@ void do_main_loop()
 
                 }
                 if (event.key.keysym.sym == SDLK_DOWN && !event.key.repeat) {
-                    if (snake[0].direction.x + 0 != 0 && snake[0].direction.y + 1 != 0) {
+                    if (snake[0].direction.x != 0 && snake[0].direction.y != -1) {
                         snake[0].direction = (v2){0, 1};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
                     }
                 }
                 if (event.key.keysym.sym == SDLK_RIGHT && !event.key.repeat) {
-                    if (snake[0].direction.x + 1 != 0 && snake[0].direction.y + 0 != 0) {
+                    if (snake[0].direction.x != -1 && snake[0].direction.y != 0) {
                         snake[0].direction = (v2){1, 0};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
@@ -430,7 +426,7 @@ void do_main_loop()
 
                 }
                 if (event.key.keysym.sym == SDLK_LEFT && !event.key.repeat) {
-                    if (snake[0].direction.x + -1 != 0 && snake[0].direction.y + 0 != 0) {
+                    if (snake[0].direction.x != 1 && snake[0].direction.y != 0) {
                         snake[0].direction = (v2){-1, 0};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
@@ -470,7 +466,7 @@ void do_main_loop()
         
         // NOTE: Esto no es necesario en WEB
         #ifndef __EMSCRIPTEN__
-        if (time_to_wait > 0 && time_to_wait < FRAME_TARGET_TIME) {
+        if (time_to_wait > 0.0f && time_to_wait < FRAME_TARGET_TIME) {
             SDL_Delay(time_to_wait);
             //SDL_Log("%f", time_to_wait);
         }
@@ -542,8 +538,6 @@ void do_main_loop()
 
 
         if (state.status == LOST && state.game_over) {
-            //init_game(&state);
-            //update_snake(snake, &state);
             
             if (state.audio_enabled) Mix_PlayChannel(CH_GAME_OVER, sounds[SND_SNAKE_DIE], 0);
 
@@ -610,7 +604,7 @@ void shutdown_app(Game_state *my_state)
     SDL_Quit();
 }
 
-int init_game(Game_state *state)
+uint32_t init_game(Game_state *state)
 {
     state->score = 0;
     state->status = PAUSED;
@@ -797,7 +791,6 @@ void game_render(Game_state *state)
             vertexCount += 4;
         }
 
-
     }
 
 
@@ -824,7 +817,6 @@ void game_render(Game_state *state)
     model = glm::scale(model, glm::vec3(SQUARE_SIZE, SQUARE_SIZE, 0.0f));
 
     glm::mat4 mvp = state->camara.projection * state->camara.view * model;
-    //glm::mat4 mvp = state->camara.projection * model;
     
     
     GLint MVPUniformLoc = glGetUniformLocation(state->renderer.shaders[TEXTURE_SHADER], "u_MVP");
@@ -862,7 +854,6 @@ void draw_debug_window(Game_state *state)
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
     
     //ImGui::SetNextWindowBgAlpha(0.80f); // Transparent background
-    //ImGui::Begin("Estado del juego", NULL, 0);
     ImGui::Begin("Estado del juego", &show_debug_overlay, window_flags);
 
     ImGui::Text("Estado:");
@@ -904,9 +895,7 @@ void draw_debug_window(Game_state *state)
 
     ImGui::SliderFloat("Time Step", &state->time_step, 0.1f, 1.0f);
 
-//    if (!audio_loaded) ImGui::BeginDisabled(true);
-        ImGui::Checkbox("Audio", &state->audio_enabled);
-//    if (!audio_loaded) ImGui::EndDisabled();
+    ImGui::Checkbox("Audio", &state->audio_enabled);
 
     
     //ImGui::SameLine();
@@ -938,7 +927,6 @@ void draw_debug_window(Game_state *state)
     if (ImGui::BeginTable("body_table", 5, flags))
     {
         // Submit columns name with TableSetupColumn() and call TableHeadersRow() to create a row with a header in each column.
-        // (Later we will show how TableSetupColumn() has other uses, optional flags, sizing weight etc.)
         ImGui::TableSetupColumn("ID");
         ImGui::TableSetupColumn("Type");
         ImGui::TableSetupColumn("Position");
@@ -946,7 +934,6 @@ void draw_debug_window(Game_state *state)
         ImGui::TableSetupColumn("Sprite");
         ImGui::TableHeadersRow();
 
-        //for (int row = 0; row < 6; row++)
         for (int row = 0; row < tail_counter; row++)
         {
             ImGui::TableNextRow();

@@ -115,7 +115,7 @@ emrun index.html
 
 ### Raspberry Pi
 
-**Para la Raspberry Pi 1 B+, en las versiones mas nuevas deberia funciona con el SDL2 que viene en los repositorios.**
+**Para la Raspberry Pi 1 B+, en las versiones mas nuevas deberia funcionar con el SDL2 que viene en los repositorios.**
 
 Seguir el tutorial para compilar SDL2 para Raspberry Pi: 
 
@@ -129,7 +129,7 @@ Una vez completado, en la misma terminal ir a la carpeta **src/** del repositori
 build_rpi1.bat
 ```
 
-Deberia ejecutar el binario para la Raspberry Pi, traspasarlo usando **scp** y ejecutarlo.
+Deberia generar el binario para la Raspberry Pi, traspasarlo usando **scp** y ejecutarlo.
 
 *NOTA: Por ahora dear imgui no funciona en Raspberry pi.*
 
@@ -137,7 +137,6 @@ Deberia ejecutar el binario para la Raspberry Pi, traspasarlo usando **scp** y e
 ## TODO
 
 - Ordenar el codigo
-- Subir proyecto de Eclipse
 - Port android
 - Bug de chocar consigo mismo si se aprietan dos direcciones muy rapido
 - Corregir el bloqueo de FPS
