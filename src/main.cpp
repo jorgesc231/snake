@@ -141,6 +141,8 @@ Vertex vertices[4000];
 
 uint32_t prev_time = SDL_GetTicks();
 
+bool accept_input = true;
+
 // debug gui state
 bool show_demo_window = false;
 bool show_another_window = false;
@@ -403,38 +405,53 @@ void do_main_loop()
 
             if (event.type == SDL_KEYDOWN ) {
                 if (event.key.keysym.sym == SDLK_UP && !event.key.repeat) {
-                    if (snake[0].direction.x != 0 && snake[0].direction.y != 1) {
+                    if (snake[0].direction.x != 0 && snake[0].direction.y != 1 && accept_input) {
+                        
                         snake[0].direction = (v2){0, -1};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
+                        accept_input = false;
                     }
 
                 }
                 if (event.key.keysym.sym == SDLK_DOWN && !event.key.repeat) {
-                    if (snake[0].direction.x != 0 && snake[0].direction.y != -1) {
+                    if (snake[0].direction.x != 0 && snake[0].direction.y != -1 && accept_input) {
+                        
                         snake[0].direction = (v2){0, 1};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
+                        accept_input = false;
                     }
                 }
                 if (event.key.keysym.sym == SDLK_RIGHT && !event.key.repeat) {
-                    if (snake[0].direction.x != -1 && snake[0].direction.y != 0) {
+                    if (snake[0].direction.x != -1 && snake[0].direction.y != 0 && accept_input) {
+                        
                         snake[0].direction = (v2){1, 0};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
+                        accept_input = false;
                     }
 
                 }
-                if (event.key.keysym.sym == SDLK_LEFT && !event.key.repeat) {
+                if (event.key.keysym.sym == SDLK_LEFT && !event.key.repeat && accept_input) {
                     if (snake[0].direction.x != 1 && snake[0].direction.y != 0) {
+                        
                         snake[0].direction = (v2){-1, 0};
 
                         if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
+                        accept_input = false;
                     }
                 }
 
 
-                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) state.status = PAUSED;
+                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) {
+                    state.status = PAUSED;
+                    accept_input = false;
+                }
                 
                 if (event.key.keysym.sym == SDLK_SPACE && !event.key.repeat ) {
                     
@@ -484,6 +501,8 @@ void do_main_loop()
         // Actualizacion de estado del juego
 
         if (tiempo > state.time_step && state.status == PLAY) {    
+
+            accept_input = true;
 
             update_snake(snake, &state);
 
@@ -838,13 +857,15 @@ void game_render(Game_state *state)
 
     print_gles_errors();
 
+// es mala idea resetear el estado innecesariamente
 #if 0
-    // TODO: Da error, investigar
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);      // TODO: Da error, investigar
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glUseProgram(0);
     glBindTexture(GL_TEXTURE_2D, 0);
 #endif
+
 }
 
 

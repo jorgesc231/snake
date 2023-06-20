@@ -138,7 +138,6 @@ Deberia generar el binario para la Raspberry Pi, traspasarlo usando **scp** y ej
 
 - Ordenar el codigo
 - Port android
-- Bug de chocar consigo mismo si se aprietan dos direcciones muy rapido
 - Corregir el bloqueo de FPS
 - Renderizar texto
 - Aspect ratio
