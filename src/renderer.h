@@ -45,3 +45,5 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
 Vertex *create_color_quad(Vertex *target, glm::vec2 position, glm::vec3 color);
 
 void print_gles_errors();
+
+void init_main_shader_attribs(batch_renderer *renderer);

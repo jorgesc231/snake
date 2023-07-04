@@ -502,8 +502,6 @@ void do_main_loop()
 
         if (tiempo > state.time_step && state.status == PLAY) {    
 
-            accept_input = true;
-
             update_snake(snake, &state);
 
             // Food Collision
@@ -518,6 +516,7 @@ void do_main_loop()
 
 
             tiempo = 0;
+            accept_input = true;
         }
 
 
@@ -562,7 +561,6 @@ void do_main_loop()
 
             state.game_over = false;
         }
-
 
         // Renderizar
         game_render(&state);
@@ -827,6 +825,8 @@ void game_render(Game_state *state)
     
     glUseProgram(state->renderer.shaders[TEXTURE_SHADER]);
     glBindTexture(GL_TEXTURE_2D, state->renderer.textures[0]);
+
+    init_main_shader_attribs(&state->renderer);
     
 
     //  Because multiplying matrices occurs from right to left,
@@ -858,8 +858,8 @@ void game_render(Game_state *state)
     print_gles_errors();
 
 // es mala idea resetear el estado innecesariamente
-#if 0
-    glBindBuffer(GL_ARRAY_BUFFER, 0);      // TODO: Da error, investigar
+#if 1
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glUseProgram(0);

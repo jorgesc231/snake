@@ -5,6 +5,7 @@
 
 #include "assets_loader.h"
 
+
 void init_camera_2d(Camera *camera, float width, float height, glm::vec2 camera_pos)
 {
     camera->position = glm::vec3(camera_pos, 0.0f);
@@ -229,17 +230,8 @@ int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER, MaxVertexCount * sizeof(Vertex), NULL, GL_DYNAMIC_DRAW);
 
-    GLint posLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_pos");
-    GLint colorLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_color");
-    GLint texLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_texCoord");
 
-    glEnableVertexAttribArray(posLoc);
-    glEnableVertexAttribArray(colorLoc);
-    glEnableVertexAttribArray(texLoc);
-    
-    glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
-    glVertexAttribPointer(colorLoc, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, r));
-    glVertexAttribPointer(texLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, u));
+    init_main_shader_attribs(renderer);
     
 
     // Inicializa el index buffer
@@ -256,6 +248,20 @@ int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_
 
     // TODO: deberia validar errores
     return 1;
+}
+
+void init_main_shader_attribs(batch_renderer *renderer) {
+    GLint posLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_pos");
+    GLint colorLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_color");
+    GLint texLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_texCoord");
+
+    glEnableVertexAttribArray(posLoc);
+    glEnableVertexAttribArray(colorLoc);
+    glEnableVertexAttribArray(texLoc);
+    
+    glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
+    glVertexAttribPointer(colorLoc, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, r));
+    glVertexAttribPointer(texLoc, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, u));
 }
 
 
