@@ -228,7 +228,7 @@ uint32_t init_engine(Game_state *state)
 
 
     // Request OpenGL ES 2.0
-    // Por alguna razon me da un contexto 3.0 con ANGLE
+    // Da un contexto 3.0 con ANGLE
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -244,7 +244,7 @@ uint32_t init_engine(Game_state *state)
 
 
     // Create the window
-    state->window = SDL_CreateWindow("Snake2D - SDL2 + GLES2", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, DISP_WIDTH, DISP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    state->window = SDL_CreateWindow("Snake2D", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, DISP_WIDTH, DISP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 
     if (!state->window)
     {

@@ -196,22 +196,7 @@ void shaderProgDestroy(GLuint shaderProg)
 
 
 GLuint texture_load(const char* filename)
-{
-
-// Ya esta inicializado
-#if 0
-// Windows: Los dlls de los formatos de imagenes de SDL_Image tienen que estar en la carpeta root 
-    int flags = IMG_INIT_PNG;
-    
-
-    if ((IMG_Init(flags) & flags) == 0)
-    {
-        // Failed
-        SDL_Log("ERROR: Texture loading failed. Could't get JPEG and PNG loaders.\n");
-        return 0;
-    }
-#endif
-    
+{  
     // Load the image
     SDL_Surface* texSurf = IMG_Load(filename);
     
@@ -289,54 +274,3 @@ void texture_destroy(GLuint texName)
 
 
 // Load Audio
-
-
-
-
-
-#if 0
-// Otra forma de compilar el shader.
-static GLuint compile_shader(GLuint type, const char* glsl)
-{
-	GLuint shader = glCreateShader(type);
-	glShaderSource(shader, 1, &glsl, NULL);
-	glCompileShader(shader);
-    
-	GLint compiled;
-    
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-    
-	if (!compiled) {
-		char message[4096];
-		glGetShaderInfoLog(shader, sizeof(message), NULL, message);
-		printf("Error compiling %s shader!\n%s", type == GL_VERTEX_SHADER ? "vertex" : "fragment", message); 
-		assert(0); 
-	}
-    
-	return shader;
-}
-
-// Uso
-GLuint vsh = compile_shader(GL_VERTEX_SHADER, vertex_glsl);
-GLuint fsh = compile_shader(GL_FRAGMENT_SHADER, fragment_glsl);
-
-GLuint program = glCreateProgram();
-glAttachShader(program, fsh);
-glAttachShader(program, vsh);
-glBindAttribLocation(program, 0, "a_pos");
-glBindAttribLocation(program, 1, "a_color");
-glBindAttribLocation(program, 2, "a_texCoord");
-glLinkProgram(program);
-glDeleteShader(fsh);
-glDeleteShader(vsh);
-
-GLint linked;
-glGetProgramiv(program , GL_LINK_STATUS, &linked);
-
-if (!linked) {
-    char message[4096];
-    glGetProgramInfoLog(program, sizeof(message), NULL, message);
-    printf ("Error linking shader!\n%s\n", message);
-    assert(0);
-}
-#endif

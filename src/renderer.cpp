@@ -105,10 +105,6 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->b = 1.0f;
     target->a = 1.0f;
     
-    //target->u = 0.0f;
-    //target->v = 0.0f;
-    //target->u = ((sprite.positionX) / (float)ATLAS_WIDTH);
-    //target->v = ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT);
     target->u = ((sprite.positionX) / (float)ATLAS_WIDTH);
     target->v = ((sprite.positionY) / (float)ATLAS_HEIGHT);
     target++;
@@ -122,10 +118,6 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->b = 1.0f;
     target->a = 1.0f;
     
-    //target->u = 1.0f;
-    //target->v = 0.0f;
-    //target->u = ((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH);
-    //target->v = ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT);
     target->u = ((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH);
     target->v = ((sprite.positionY) / (float)ATLAS_HEIGHT);
     target++;
@@ -139,10 +131,6 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->b = 1.0f;
     target->a = 1.0f;
     
-    //target->u = 1.0f;
-    //target->v = 1.0f;
-    //target->u = ((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH);
-    //target->v = ((sprite.positionY) / (float)ATLAS_HEIGHT);
     target->u = ((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH);
     target->v = ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT);
     target++;
@@ -156,10 +144,6 @@ Vertex *create_texture_quad(Vertex* target, float x, float y, SPRITE_ID sprite_i
     target->b = 1.0f;
     target->a = 1.0f;
     
-    //target->u = 0.0f;
-    //target->v = 1.0f;
-    //target->u = ((sprite.positionX) / (float)ATLAS_WIDTH);
-    //target->v = ((sprite.positionY) / (float)ATLAS_HEIGHT);
     target->u = ((sprite.positionX) / (float)ATLAS_WIDTH);
     target->v = ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT);
     target++;
@@ -183,8 +167,7 @@ int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_
     // Load Texture and Shaders
     renderer->textures[0] = texture_load(data_path(path_buffer, base_path, "graphics/snake_atlas.png"));
     renderer->shaders[TEXTURE_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/texture.vertex"), data_path(temporal_path_buffer, base_path, "shaders/texture.fragment"));
-    //renderer->textures[0] = texture_load("../assets/graphics/snake_atlas.png");
-    //renderer->shaders[TEXTURE_SHADER] = shaderProgLoad("../assets/shaders/texture.vertex", "../assets/shaders/texture.fragment");
+    renderer->shaders[TEXT_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/text.vertex"), data_path(temporal_path_buffer, base_path, "shaders/text.fragment"));
 
     assert(renderer->textures[0]);
     assert(renderer->shaders[TEXTURE_SHADER]);
@@ -250,11 +233,16 @@ int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_
     return 1;
 }
 
+
+// TODO: Podria replicar el comportamiento de los VAO usando funciones...
 void init_main_shader_attribs(batch_renderer *renderer) {
+    // TODO: Esto podria almacenarlo en alguna parte para no tener que llamarlo cada frame
     GLint posLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_pos");
     GLint colorLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_color");
     GLint texLoc = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_texCoord");
 
+
+    // NOTA: Este estado se eliminan cuando se usa glBindBuffer(GL_ARRAY_BUFFER, 0);
     glEnableVertexAttribArray(posLoc);
     glEnableVertexAttribArray(colorLoc);
     glEnableVertexAttribArray(texLoc);
@@ -275,115 +263,3 @@ void print_gles_errors()
         //assert(false);
     }
 }
-
-#if 0
-Vertex *create_quad(Vertex *target, glm::vec2 position, glm::vec2 size, float rotate, glm::vec3 color);
-#endif
-
-#if 0
-//glUseProgram(renderer->shaders[TEXTURE_SHADER]);
-
-
-// prepare transformations
-glm::mat4 model = glm::mat4(1.0f);
-
-model = glm::translate(model, glm::vec3(position, 0.0f));
-model = glm::translate(model, glm::vec3(0.5*size.x, 0.5*size.y, 0.0));
-model = glm::rotate(model, glm::radians(rotate),
-                    glm::vec3(0.0, 0.0, 1.0));
-model = glm::translate(model, glm::vec3(-0.5*size.x, -0.5*size.y, 0.0));
-model = glm::scale(model, glm::vec3(size, 1.0f));
-
-//shader.SetMatrix4("model", model);
-//shader.SetVector3f("spriteColor", color);
-
-glActiveTexture(GL_TEXTURE0);
-//glBindTexture(GL_TEXTURE_2D, state->textures[0]);
-
-
-//glBindVertexArray(quadVAO);
-//glDrawArrays(GL_TRIANGLES, 0, 6);
-//glBindVertexArray(0);
-#endif
-
-#if 0
-
-// Renderizar
-static int setup = 0;
-
-if (!setup) {
-    setup = 1;
-    
-    
-    glUseProgram(state.shaders[TEXTURE_SHADER]);
-    
-    GLuint buffer;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
-    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, r));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, u));
-    
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    
-    glBindTexture(GL_TEXTURE_2D, state.textures[0]);
-    
-    GLint texSamplerUniformLoc = glGetUniformLocation(state.shaders[TEXTURE_SHADER], "texSampler");
-    if (texSamplerUniformLoc < 0) {
-        SDL_Log("ERROR: No se pudo obtener la ubicacion de texSampler\n");
-    }
-    
-    glUniform1i(texSamplerUniformLoc, 0);
-    
-    glClearColor(0.392156863f, 0.584313725f, 0.929411765f, 1.f);
-    
-    assert(glGetError() == GL_NO_ERROR);
-}
-
-Vertex vtx[] =
-{
-    {.x = -0.5f, .y = -0.5, .r = 255, .u = 0.0f, .v = 0.0f},
-    {.x = 0.5f, .y = -0.5f, .g = 255, .u = 1.0f, .v = 0.0f},
-    {.x = 0.5f, .y = 0.5f, .b = 255, .u = 1.0f, .v = 1.0f},
-    
-    {.x = 0.5f, .y = 0.5f, .r = 255, .u = 1.0f, .v = 1.0f},
-    {.x = -0.5f, .y = 0.5f, .r = 255, .u = 0.0f, .v = 1.0f},
-    {.x = -0.5f, .y = -0.5f, .r = 255, .u = 0.0f, .v = 0.0f},
-};
-
-glClear(GL_COLOR_BUFFER_BIT);
-glBufferData(GL_ARRAY_BUFFER, sizeof(vtx), vtx, GL_STATIC_DRAW);
-
-glDrawArrays(GL_TRIANGLES, 0, 6);
-
-assert(glGetError() == GL_NO_ERROR); 
-
-// Update the window
-
-SDL_GL_SwapWindow(window);
-
-
-// Wait for the user to quit
-
-bool quit = false;
-
-while (!quit)
-{
-    SDL_Event event;
-    
-    if (SDL_WaitEvent(&event) != 0) {
-        if (event.type == SDL_QUIT) {
-            quit = true;
-        }
-        
-        // Salir ante cualquier pulsacion de tecla!
-        if (event.type == SDL_KEYDOWN) {
-            quit = true;
-        }
-    }
-}
-
-#endif
