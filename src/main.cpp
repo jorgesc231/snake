@@ -63,7 +63,7 @@ void print_gles_errors();
 #define SQUARE_Y 15
 #define SQUARE_SIZE 40
 
-#define DEFAULT_TIMESTEP 0.15f
+#define DEFAULT_TIMESTEP 0.13f
 
 // Colores
 #define DEFAULT_CELL_COLOR1 glm::vec3(0.67f, 0.84f, 0.32f)
