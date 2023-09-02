@@ -26,8 +26,8 @@
 
 #endif
 
-//#include <SDL2/SDL_opengles2.h>
-#include <GLES2/gl2.h>          // Use GL ES 2
+#include <SDL2/SDL_opengles2.h>
+//#include <GLES2/gl2.h>          // Use GL ES 2
 
 // Imgui stuff
 #include <imgui.h>
@@ -69,6 +69,8 @@ void print_gles_errors();
 #define DEFAULT_CELL_COLOR1 glm::vec3(0.67f, 0.84f, 0.32f)
 #define DEFAULT_CELL_COLOR2 glm::vec3(0.64f, 0.82f, 0.29f)
 
+#define MAIN_FONT_SIZE 28.0f
+#define LARGE_FONT_SIZE 48.0f
 
 uint32_t DISP_WIDTH = 1280;
 uint32_t DISP_HEIGHT = 720;
@@ -152,6 +154,8 @@ glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
 glm::vec3 cell_color1 = DEFAULT_CELL_COLOR1;
 glm::vec3 cell_color2 = DEFAULT_CELL_COLOR2;
 
+ImFont* mainFont= NULL;
+ImFont* largeFont= NULL;
 
 uint32_t init_engine(Game_state *state);
 void do_main_loop();
@@ -161,7 +165,8 @@ void update_snake(Snake *snake, Game_state *state);
 void game_render(Game_state *state);
 void draw_debug_overlay();
 void draw_debug_window(Game_state *state);
-
+void draw_score(Game_state *state);
+void draw_status(Game_state *state);
 
 // Estado del juego
 Game_state state;
@@ -288,6 +293,14 @@ uint32_t init_engine(Game_state *state)
     // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
     io.IniFilename = nullptr;
     //#endif
+
+
+    // Load the fonts
+    io.Fonts->AddFontDefault();
+    mainFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), MAIN_FONT_SIZE);
+    largeFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), LARGE_FONT_SIZE);
+    IM_ASSERT(mainFont != NULL);
+    IM_ASSERT(largeFont != NULL);
 #endif
 
     
@@ -367,6 +380,24 @@ uint32_t init_engine(Game_state *state)
 
 void do_main_loop()
 {    
+    // The code calculates the elapsedTime in seconds since the last time this code was executed.
+    uint32_t current_time = SDL_GetTicks();
+    float time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
+        
+    // NOTE: Esto no es necesario en WEB
+    #ifndef __EMSCRIPTEN__
+    if (time_to_wait > 0.0f && time_to_wait < FRAME_TARGET_TIME) {
+        SDL_Delay(time_to_wait);
+        //SDL_Log("%f", time_to_wait);
+    }
+    #endif
+
+    float elapsed_time = (float)(current_time - prev_time) / 1000.0f;
+
+    prev_time = current_time;  // Prepare for the next frame
+
+
+        // Process Events
         SDL_Event event;
         
         while(SDL_PollEvent(&event)) {
@@ -404,6 +435,17 @@ void do_main_loop()
 
 
             if (event.type == SDL_KEYDOWN ) {
+
+                // Inicia el juego pulsando cualquier boton, que no sea Escape, F1 y F5, por que se usan para depuracion.
+                if ((event.key.keysym.sym != SDLK_ESCAPE && event.key.keysym.sym != SDLK_F1 && event.key.keysym.sym != SDLK_F5) && !event.key.repeat ) {
+                    
+                    if (state.status == LOST) {
+                        init_game(&state);            
+                    }                
+
+                    state.status = PLAY;
+                }
+
                 if (event.key.keysym.sym == SDLK_UP && !event.key.repeat) {
                     if (snake[0].direction.x != 0 && snake[0].direction.y != 1 && accept_input) {
                         
@@ -453,15 +495,6 @@ void do_main_loop()
                     accept_input = false;
                 }
                 
-                if (event.key.keysym.sym == SDLK_SPACE && !event.key.repeat ) {
-                    
-                    if (state.status == LOST) {
-                        init_game(&state);            
-                    }                
-
-                    state.status = PLAY;
-                }
-
 
                 if (event.key.keysym.sym == SDLK_F1 && !event.key.repeat) {
                     show_debug_overlay = !show_debug_overlay;
@@ -474,24 +507,6 @@ void do_main_loop()
                 #endif
             }
         }
-
-
-        
-        // The code calculates the elapsedTime in seconds since the last time this code was executed.
-        uint32_t current_time = SDL_GetTicks();
-        float time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
-        
-        // NOTE: Esto no es necesario en WEB
-        #ifndef __EMSCRIPTEN__
-        if (time_to_wait > 0.0f && time_to_wait < FRAME_TARGET_TIME) {
-            SDL_Delay(time_to_wait);
-            //SDL_Log("%f", time_to_wait);
-        }
-        #endif
-
-        float elapsed_time = (float)(current_time - prev_time) / 1000.0f;
-
-        prev_time = current_time;  // Prepare for the next frame
         
 
         static float tiempo = 0;
@@ -573,6 +588,10 @@ void do_main_loop()
         ImGui::NewFrame();
 
 
+        draw_score(&state);
+        
+        if (state.status != PLAY) draw_status(&state);
+
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
@@ -581,7 +600,6 @@ void do_main_loop()
             draw_debug_window(&state);
             draw_debug_overlay();
         }
-
 
         print_gles_errors();
         
@@ -870,6 +888,74 @@ void game_render(Game_state *state)
 
 
 #if ACTIVATE_IMGUI
+
+// ImGuiCond_FirstUseEver = if window has not data in .ini file
+// ImGuiCond_Once = once per session
+
+void draw_score(Game_state *state) {
+
+    ImGuiIO& io = ImGui::GetIO();
+    AtlasSprite sprite = DescAtlas[APPLE];
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2((int)io.DisplaySize.x, 0.0f));
+
+    // ImGuiWindowFlags_NoBackground
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoInputs;
+    ImGui::SetNextWindowBgAlpha(0.4f); // Transparent background
+    ImGui::Begin("Empezar", NULL, window_flags);
+
+    ImGui::PushFont(mainFont);
+
+    //ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+    ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize("100").x) / 2.f);
+    ImGui::Image((void*)(intptr_t)state->renderer.textures[0], 
+        ImVec2(sprite.sourceWidth, sprite.sourceHeight), 
+        ImVec2(((sprite.positionX) / (float)ATLAS_WIDTH), ((sprite.positionY) / (float)ATLAS_HEIGHT)), 
+        ImVec2(((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH), ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT)));
+    
+    ImGui::SameLine();
+    ImVec2 pos = ImGui::GetCursorPos();
+    ImGui::SetCursorPosY(pos.y + (sprite.sourceHeight - MAIN_FONT_SIZE) / 2);
+    ImGui::Text("%d", state->score);
+    //ImGui::PopStyleColor();
+
+    ImGui::PopFont();
+
+    ImGui::End();
+}
+
+void draw_status(Game_state *state) {
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2((int)io.DisplaySize.x, (int)io.DisplaySize.y));
+
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoInputs;
+    ImGui::SetNextWindowBgAlpha(0.6f); // Transparent background
+    
+    ImGui::Begin("Status", NULL, window_flags);
+
+    ImGui::PushFont(largeFont);
+    
+    if (state->status == PAUSED) {
+        ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize("Pausa").x) / 2.f);
+        ImGui::SetCursorPosY( (ImGui::GetWindowHeight() - ImGui::CalcTextSize("Pausa").y) / 2.f);
+        ImGui::Text("Pausa");
+    }
+             
+    if (state->status == LOST) {
+        ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize("Perdiste!").x) / 2.f);
+        ImGui::SetCursorPosY( (ImGui::GetWindowHeight() - ImGui::CalcTextSize("Perdiste!").y) / 2.f);
+        ImGui::Text("Perdiste!");
+    }
+
+    ImGui::PopFont();
+
+    ImGui::End();
+}
+
 void draw_debug_window(Game_state *state)
 {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
