@@ -167,7 +167,7 @@ int init_batch_renderer(batch_renderer *renderer, char* path_buffer, char* base_
     // Load Texture and Shaders
     renderer->textures[0] = texture_load(data_path(path_buffer, base_path, "graphics/snake_atlas.png"));
     renderer->shaders[TEXTURE_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/texture.vertex"), data_path(temporal_path_buffer, base_path, "shaders/texture.fragment"));
-    renderer->shaders[TEXT_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/text.vertex"), data_path(temporal_path_buffer, base_path, "shaders/text.fragment"));
+    //renderer->shaders[TEXT_SHADER] = shaderProgLoad(data_path(path_buffer, base_path, "shaders/text.vertex"), data_path(temporal_path_buffer, base_path, "shaders/text.fragment"));
 
     assert(renderer->textures[0]);
     assert(renderer->shaders[TEXTURE_SHADER]);
