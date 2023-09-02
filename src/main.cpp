@@ -232,14 +232,24 @@ uint32_t init_engine(Game_state *state)
     }
 
 
-    // Request OpenGL ES 2.0
-    // Da un contexto 3.0 con ANGLE
-    const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     
+    // Request OpenGL ES 2.0 on Raspberry Pi
+
+    #if _RPI1
+    const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+
+    #else
+    // Request OpenGL ES 3.0 context on other devices (ANGLE provides 3.0 context anyway)
+    const char* glsl_version = "#version 300 es";
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    #endif
+
+
     
     // Want double-buffering
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -564,7 +574,7 @@ void do_main_loop()
             }
 
 #ifdef NDEBUG
-            SDL_Log("loop counter: %d", loop_counter);
+            //SDL_Log("loop counter: %d", loop_counter);
 #endif
 
         }
