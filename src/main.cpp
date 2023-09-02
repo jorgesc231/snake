@@ -235,9 +235,8 @@ uint32_t init_engine(Game_state *state)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     
-    // Request OpenGL ES 2.0 on Raspberry Pi
-
-    #if _RPI1
+    // Request OpenGL ES 2.0 on Raspberry Pi and Web (idk why web does not support GL ES 3.0...)
+    #if _RPI1 || __EMSCRIPTEN__
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
