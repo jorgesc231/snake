@@ -62,6 +62,7 @@ void print_gles_errors();
 #define SQUARE_X 17
 #define SQUARE_Y 15
 #define SQUARE_SIZE 40
+#define SCORE_BAR_SIZE 60.0f
 
 #define DEFAULT_TIMESTEP 0.13f
 
@@ -141,7 +142,7 @@ Mix_Chunk* sounds[SND_MAX];
 
 Vertex vertices[4000];
 
-uint32_t prev_time = SDL_GetTicks();
+uint64_t prev_time = SDL_GetTicks64();
 
 bool accept_input = true;
 
@@ -319,9 +320,10 @@ uint32_t init_engine(Game_state *state)
 
     // Permite redimensionar la ventana
     SDL_SetWindowResizable(state->window, SDL_TRUE);
-    SDL_SetWindowMinimumSize(state->window, 960, 540);
+    SDL_SetWindowMinimumSize(state->window, 960, 720);
 
-    glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
+    //glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
+    glViewport(0, 0, 1920, 1080);
 
 #ifdef _RPI1
     if (SDL_ShowCursor(SDL_DISABLE));
@@ -370,7 +372,7 @@ uint32_t init_engine(Game_state *state)
 
 
     // Inicializa el renderer
-    init_camera_2d(&state->camara, 1280, 720, glm::vec2(0, 0));
+    init_camera_2d(&state->camara, DISP_WIDTH, DISP_HEIGHT, glm::vec2(0, 0));
     init_batch_renderer(&state->renderer, state->assets_path_buffer, state->base_path);
 
     print_gles_errors();
@@ -390,8 +392,8 @@ uint32_t init_engine(Game_state *state)
 void do_main_loop()
 {    
     // The code calculates the elapsedTime in seconds since the last time this code was executed.
-    uint32_t current_time = SDL_GetTicks();
-    float time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
+    uint64_t current_time = SDL_GetTicks64();
+    double time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
         
     // NOTE: Esto no es necesario en WEB
     #ifndef __EMSCRIPTEN__
@@ -401,7 +403,7 @@ void do_main_loop()
     }
     #endif
 
-    float elapsed_time = (float)(current_time - prev_time) / 1000.0f;
+    double elapsed_time = (double)(current_time - prev_time) / 1000.0f;
 
     prev_time = current_time;  // Prepare for the next frame
 
@@ -436,7 +438,13 @@ void do_main_loop()
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
                     {
                         SDL_Log("Window %d size changed to %dx%d\n", event.window.windowID, event.window.data1, event.window.data2);
-                        glViewport(0, 0, event.window.data1, event.window.data2);
+                        
+                        DISP_WIDTH = event.window.data1;
+                        DISP_HEIGHT = event.window.data2;
+                        
+                        //glViewport(0, 0, event.window.data1, event.window.data2);
+
+                        init_camera_2d(&state.camara, DISP_WIDTH, DISP_HEIGHT, glm::vec2(0, 0));
 
                     } break;
                 }
@@ -855,11 +863,10 @@ void game_render(Game_state *state)
 
     init_main_shader_attribs(&state->renderer);
     
-
     //  Because multiplying matrices occurs from right to left,
     // we transform the matrix in reverse order: translate, rotate, and then scale.
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - (SQUARE_Y * SQUARE_SIZE / 2), 0.0f));
+    model = glm::translate(model, glm::vec3((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - ((SQUARE_Y * SQUARE_SIZE) / 2), 0.0f));
     model = glm::scale(model, glm::vec3(SQUARE_SIZE, SQUARE_SIZE, 0.0f));
 
     glm::mat4 mvp = state->camara.projection * state->camara.view * model;
@@ -906,8 +913,9 @@ void draw_score(Game_state *state) {
     ImGuiIO& io = ImGui::GetIO();
     AtlasSprite sprite = DescAtlas[APPLE];
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2((int)io.DisplaySize.x, 0.0f));
+    ImGui::SetNextWindowPos(ImVec2((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - (SQUARE_Y * SQUARE_SIZE) / 2 - SCORE_BAR_SIZE));
+    //ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(SQUARE_X * SQUARE_SIZE, SCORE_BAR_SIZE));
 
     // ImGuiWindowFlags_NoBackground
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoInputs;

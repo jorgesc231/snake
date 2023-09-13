@@ -40,19 +40,19 @@ typedef struct AtlasSprite {
 // Atlas sprites array
 static AtlasSprite DescAtlas[ATLAS_SPRITE_COUNT] = {
 	{ NO_TEXTURE, 120, 80, 39, 39, 0},      // 39 para evitar lineas entre los cuadrados.
-	{ APPLE, 0, 0, 40, 40, 0},
+	{ APPLE, 0, 0, 39, 39, 0},
 
-	{ TAIL_RIGHT, 120, 0, 40, 40, 0},
-    { TAIL_UP, 160, 0, 40, 40, 0},
-	{ TAIL_DOWN, 40, 80, 40, 40, 0},
-    { TAIL_LEFT, 80, 80, 40, 40, 0},
+	{ TAIL_RIGHT, 120, 0, 39, 39, 0},
+    { TAIL_UP, 160, 0, 39, 39, 0},
+	{ TAIL_DOWN, 40, 80, 39, 39, 0},
+    { TAIL_LEFT, 80, 80, 39, 39, 0},
 
-	{ BODY_BOTTOMLEFT, 40, 0, 40, 40, 0},
-    { BODY_BOTTOMRIGHT, 80, 0, 40, 40, 0},
-	{ BODY_HORIZONTAL, 200, 0, 40, 40, 0},
-    { BODY_TOPLEFT, 0, 40, 40, 40, 0},
-    { BODY_TOPRIGHT, 40, 40, 40, 40, 0},
-    { BODY_VERTICAL, 80, 40, 40, 40, 0},
+	{ BODY_BOTTOMLEFT, 40, 0, 39, 39, 0},
+    { BODY_BOTTOMRIGHT, 80, 0, 39, 39, 0},
+	{ BODY_HORIZONTAL, 200, 0, 39, 39, 0},
+    { BODY_TOPLEFT, 0, 40, 39, 39, 0},
+    { BODY_TOPRIGHT, 40, 40, 39, 39, 0},
+    { BODY_VERTICAL, 80, 40, 39, 39, 0},
 
 	{ HEAD_DOWN, 120, 40, 40, 40, 0},
     { HEAD_LEFT, 160, 40, 40, 40, 0},
