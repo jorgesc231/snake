@@ -322,8 +322,8 @@ uint32_t init_engine(Game_state *state)
     SDL_SetWindowResizable(state->window, SDL_TRUE);
     SDL_SetWindowMinimumSize(state->window, 960, 720);
 
-    //glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
-    glViewport(0, 0, 1920, 1080);
+    glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
+    //glViewport(0, 0, 1920, 1080);
 
 #ifdef _RPI1
     if (SDL_ShowCursor(SDL_DISABLE));
@@ -442,7 +442,7 @@ void do_main_loop()
                         DISP_WIDTH = event.window.data1;
                         DISP_HEIGHT = event.window.data2;
                         
-                        //glViewport(0, 0, event.window.data1, event.window.data2);
+                        glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
 
                         init_camera_2d(&state.camara, DISP_WIDTH, DISP_HEIGHT, glm::vec2(0, 0));
 
