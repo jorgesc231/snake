@@ -10,13 +10,15 @@
 
 #include <assert.h>
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__ANDROID__)
 #include <SDL.h>
 #include <SDL_image.h>
 //#include <SDL_ttf.h>
 #include <SDL_mixer.h>
 
+#if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
+#endif
 
 #else
 
@@ -215,8 +217,15 @@ uint32_t init_engine(Game_state *state)
         SDL_Log("base path: %s\n", state->base_path);
 
     } else {
-        SDL_Log("No se pudo obtener el Base Path\n");
-        // TODO: Esto deberia ser un error fatal. 
+        // Si no se puede obtener el base path, usamos el CWD como tal
+        #ifdef __ANDROID__
+        // Caso especial para android, no implementa la funcion SDL_GetBasePath()
+        state->base_path = "";
+        #else
+        state->base_path = cwd;
+        #endif
+
+        SDL_Log("No se pudo obtener el Base Path, Usando CWD... base path: %s\n", state->base_path);
     }
 
 

@@ -8,7 +8,10 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_opengles2.h>
 
-#ifdef NDEBUG
+
+#if defined(__ANDROID__)
+#define ASSET_FOLDER "%s%s"
+#elif NDEBUG
 // TODO: Deberia cambiar dependiendo de la plataforma...
 #define ASSET_FOLDER "%s../assets/%s"
 #else
@@ -44,6 +47,8 @@ static size_t get_file_length(FILE *file)
 
 static GLuint shader_load(const char *filename, GLenum shader_type)
 {
+	SDL_Log("Loading Shader: %s\n", filename);
+
     FILE *file = fopen(filename, "r");
     
     if (!file) {
@@ -109,6 +114,8 @@ static GLuint shader_load(const char *filename, GLenum shader_type)
 		shader = 0;
 	}
     
+	SDL_Log("Shader Loaded: %s \n", filename);
+
 	return shader;
 }
 
@@ -194,9 +201,10 @@ void shaderProgDestroy(GLuint shaderProg)
 
 // Texture loading
 
-
 GLuint texture_load(const char* filename)
 {  
+	SDL_Log("Loading Texture: %s\n", filename);
+
     // Load the image
     SDL_Surface* texSurf = IMG_Load(filename);
     
@@ -262,6 +270,8 @@ GLuint texture_load(const char* filename)
     texSurf = NULL;
     
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    SDL_Log("Texture Loaded: %s\n", filename);
 
     return texture;
 }
