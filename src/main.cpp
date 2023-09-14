@@ -51,8 +51,8 @@
 void print_gles_errors();
 
 
-// TODO: Por ahora imgui no funciona en la raspberry pi 1 B+ ni Android
-#if defined(_RPI1) || defined(__ANDROID__)
+// TODO: Por ahora imgui no funciona en la raspberry pi 1 B+
+#if defined(_RPI1)
 #define ACTIVATE_IMGUI 0
 #else
 #define ACTIVATE_IMGUI 1
@@ -914,7 +914,7 @@ void game_render(Game_state *state)
 
 void draw_score(Game_state *state) {
 
-    ImGuiIO& io = ImGui::GetIO();
+    //ImGuiIO& io = ImGui::GetIO();
     AtlasSprite sprite = DescAtlas[APPLE];
 
     ImGui::SetNextWindowPos(ImVec2((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - (SQUARE_Y * SQUARE_SIZE) / 2 - SCORE_BAR_SIZE));
