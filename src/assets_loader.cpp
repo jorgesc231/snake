@@ -23,7 +23,7 @@
 // Construye la ruta hacia los assets basado en la ubicacion del ejecutable:
 char* data_path(char *path_buffer, char* base_path, const char* asset_path) 
 {
-	snprintf(path_buffer, PATH_MAX, ASSET_FOLDER, base_path, asset_path);
+    snprintf(path_buffer, PATH_MAX, ASSET_FOLDER, base_path, asset_path);
     return path_buffer;
 }
 
@@ -47,7 +47,7 @@ static size_t get_file_length(SDL_RWops *file)
 
 static GLuint shader_load(const char *filename, GLenum shader_type)
 {
-	SDL_Log("Loading Shader: %s\n", filename);
+    SDL_Log("Loading Shader: %s\n", filename);
 
     SDL_RWops *file = SDL_RWFromFile(filename, "r");
     
@@ -65,58 +65,58 @@ static GLuint shader_load(const char *filename, GLenum shader_type)
     
     if (!shader_src) {
         
-		SDL_Log("Out of memory when reading file: %s\n", filename);
-		SDL_RWclose(file);
-		file = NULL;
+        SDL_Log("Out of memory when reading file: %s\n", filename);
+        SDL_RWclose(file);
+        file = NULL;
         
-		return 0;
-	}
+        return 0;
+    }
     
     SDL_RWread(file, shader_src, 1, length);
     
     // Done with the file
-	SDL_RWclose(file);
-	file = NULL;
+    SDL_RWclose(file);
+    file = NULL;
     
     
     // Create the shader
-	GLuint shader = glCreateShader(shader_type);
-	glShaderSource(shader, 1, (const GLchar**)&shader_src, NULL);
-	free(shader_src);
-	shader_src = NULL;
+    GLuint shader = glCreateShader(shader_type);
+    glShaderSource(shader, 1, (const GLchar**)&shader_src, NULL);
+    free(shader_src);
+    shader_src = NULL;
     
     
     // Compile it
-	glCompileShader(shader);
-	GLint compileSucceeded = GL_FALSE;
+    glCompileShader(shader);
+    GLint compileSucceeded = GL_FALSE;
     
     glGetShaderiv(shader, GL_COMPILE_STATUS, &compileSucceeded);
     
     if (!compileSucceeded) {
         
-		// Compilation failed. Print error info
-		SDL_Log("Compilation of shader: %s failed\n", filename);
-		GLint logLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+        // Compilation failed. Print error info
+        SDL_Log("Compilation of shader: %s failed\n", filename);
+        GLint logLength = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
         
-		GLchar* errLog = (GLchar*)malloc(logLength);
+        GLchar* errLog = (GLchar*)malloc(logLength);
         
-		if (errLog) {
-			glGetShaderInfoLog(shader, logLength, &logLength, errLog);
-			SDL_Log("%s\n", errLog);
-			free(errLog);
-		}
-		else {
-			SDL_Log("Couldn't get shader log; out of memory\n");
-		}
+        if (errLog) {
+            glGetShaderInfoLog(shader, logLength, &logLength, errLog);
+            SDL_Log("%s\n", errLog);
+            free(errLog);
+        }
+        else {
+            SDL_Log("Couldn't get shader log; out of memory\n");
+        }
         
-		glDeleteShader(shader);
-		shader = 0;
-	}
+        glDeleteShader(shader);
+        shader = 0;
+    }
     
-	SDL_Log("Shader Loaded: %s \n", filename);
+    SDL_Log("Shader Loaded: %s \n", filename);
 
-	return shader;
+    return shader;
 }
 
 
@@ -124,77 +124,77 @@ static GLuint shader_load(const char *filename, GLenum shader_type)
 * Destroys a shader.
 */
 static void shaderDestroy(GLuint shaderID) {
-	glDeleteShader(shaderID);
+    glDeleteShader(shaderID);
 }
 
 
 GLuint shaderProgLoad(const char* vertFilename, const char* fragFilename) {
-	
-	GLuint vertShader = shader_load(vertFilename, GL_VERTEX_SHADER);
     
-	if (!vertShader) {
-		SDL_Log("Couldn't load vertex shader: %s\n", vertFilename);
-		return 0;
-	}
+    GLuint vertShader = shader_load(vertFilename, GL_VERTEX_SHADER);
     
-	GLuint fragShader = shader_load(fragFilename, GL_FRAGMENT_SHADER);
+    if (!vertShader) {
+        SDL_Log("Couldn't load vertex shader: %s\n", vertFilename);
+        return 0;
+    }
     
-	if (!fragShader) {
-		SDL_Log("Couldn't load fragment shader: %s\n", fragFilename);
-		shaderDestroy(vertShader);
-		vertShader = 0;
+    GLuint fragShader = shader_load(fragFilename, GL_FRAGMENT_SHADER);
+    
+    if (!fragShader) {
+        SDL_Log("Couldn't load fragment shader: %s\n", fragFilename);
+        shaderDestroy(vertShader);
+        vertShader = 0;
         
-		return 0;
-	}
+        return 0;
+    }
     
-	GLuint shaderProg = glCreateProgram();
+    GLuint shaderProg = glCreateProgram();
     
-	if (shaderProg) {
-		glAttachShader(shaderProg, vertShader);
-		glAttachShader(shaderProg, fragShader);
+    if (shaderProg) {
+        glAttachShader(shaderProg, vertShader);
+        glAttachShader(shaderProg, fragShader);
         
-		glLinkProgram(shaderProg);
+        glLinkProgram(shaderProg);
         
-		GLint linkingSucceeded = GL_FALSE;
-		glGetProgramiv(shaderProg, GL_LINK_STATUS, &linkingSucceeded);
+        GLint linkingSucceeded = GL_FALSE;
+        glGetProgramiv(shaderProg, GL_LINK_STATUS, &linkingSucceeded);
         
-		if (!linkingSucceeded) {
-			SDL_Log("Linking shader failed (vert. shader: %s, frag. shader: %s\n)", vertFilename, fragFilename);
+        if (!linkingSucceeded) {
+            SDL_Log("Linking shader failed (vert. shader: %s, frag. shader: %s\n)", vertFilename, fragFilename);
             
-			GLint logLength = 0;
-			glGetProgramiv(shaderProg, GL_INFO_LOG_LENGTH, &logLength);
+            GLint logLength = 0;
+            glGetProgramiv(shaderProg, GL_INFO_LOG_LENGTH, &logLength);
             
-			GLchar* errLog = (GLchar*)malloc(logLength);
+            GLchar* errLog = (GLchar*)malloc(logLength);
             
-			if (errLog) {
-				glGetProgramInfoLog(shaderProg, logLength, &logLength, errLog);
-				SDL_Log("%s\n", errLog);
-				free(errLog);
-			}
-			else {
-				SDL_Log("Couldn't get shader link log; out of memory\n");
-			}
+            if (errLog) {
+                glGetProgramInfoLog(shaderProg, logLength, &logLength, errLog);
+                SDL_Log("%s\n", errLog);
+                free(errLog);
+            }
+            else {
+                SDL_Log("Couldn't get shader link log; out of memory\n");
+            }
             
-			glDeleteProgram(shaderProg);
-			shaderProg = 0;
-		}
-	}
+            glDeleteProgram(shaderProg);
+            shaderProg = 0;
+        }
+    }
     
-	else {
-		SDL_Log("Couldn't create shader program\n");
-	}
+    else {
+        SDL_Log("Couldn't create shader program\n");
+    }
     
-	// Don't need these any more
+    // Don't need these any more
     
-	shaderDestroy(vertShader);
-	shaderDestroy(fragShader);
+    shaderDestroy(vertShader);
+    shaderDestroy(fragShader);
     
-	return shaderProg;
+    return shaderProg;
 }
 
 void shaderProgDestroy(GLuint shaderProg)
 {
-	glDeleteProgram(shaderProg);
+    glDeleteProgram(shaderProg);
 }
 
 
@@ -203,7 +203,7 @@ void shaderProgDestroy(GLuint shaderProg)
 
 GLuint texture_load(const char* filename)
 {  
-	SDL_Log("Loading Texture: %s\n", filename);
+    SDL_Log("Loading Texture: %s\n", filename);
 
     // Load the image
     SDL_Surface* texSurf = IMG_Load(filename);
@@ -222,16 +222,16 @@ GLuint texture_load(const char* filename)
     switch (texSurf->format->BytesPerPixel)
     {
         case 3:
-        	format = GL_RGB;
+            format = GL_RGB;
         break;
         case 4:
-        	format = GL_RGBA;
+            format = GL_RGBA;
         break;
         default:
-			SDL_Log("Can't load image %s; it isn't a 24/32-bit image\n", filename);
-			SDL_FreeSurface(texSurf);
-			texSurf = NULL;
-			return 0;
+            SDL_Log("Can't load image %s; it isn't a 24/32-bit image\n", filename);
+            SDL_FreeSurface(texSurf);
+            texSurf = NULL;
+            return 0;
     }
     
     // Create the texture
@@ -261,7 +261,7 @@ GLuint texture_load(const char* filename)
         SDL_FreeSurface(texSurf);
         texSurf = NULL;
         SDL_Log("Creating texture %s failed, code %u\n", filename, err);
-        //		__debugbreak();
+        //      __debugbreak();
         return 0;
     }
     
@@ -284,3 +284,46 @@ void texture_destroy(GLuint texName)
 
 
 // Load Audio
+
+
+// Load Font
+void* font_load(const char *filename, void *font_data, uint64_t *font_data_size)
+{
+    SDL_Log("Loading Font: %s\n", filename);
+
+    SDL_RWops *file = SDL_RWFromFile(filename, "r");
+    
+    if (!file) {
+        SDL_Log("Can't open file: %s\n", filename);
+        
+        return 0;
+    }
+    
+    size_t length = get_file_length(file);
+    
+    // Alloc space for the file (plus '\0' termination)
+    
+    void* file_content = (void*)calloc(length + 1, 1);
+    
+    if (!file_content) {
+        
+        SDL_Log("Out of memory when reading file: %s\n", filename);
+        SDL_RWclose(file);
+        file = NULL;
+        
+        return 0;
+    }
+    
+    SDL_RWread(file, file_content, 1, length);
+    
+    // Done with the file
+    SDL_RWclose(file);
+    file = NULL;
+    
+    SDL_Log("Font Loaded: %s \n", filename);
+
+    font_data = file_content;
+    *font_data_size = length;
+
+    return file_content;
+}

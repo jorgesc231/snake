@@ -286,6 +286,10 @@ uint32_t init_engine(Game_state *state)
 
     SDL_GL_SetSwapInterval(0);
 
+    SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
+    SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
+    SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
+
 
 #if ACTIVATE_IMGUI
     // Setup Dear ImGui context
@@ -312,17 +316,28 @@ uint32_t init_engine(Game_state *state)
 
     // Load the fonts
     io.Fonts->AddFontDefault();
-    mainFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), MAIN_FONT_SIZE);
-    largeFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), LARGE_FONT_SIZE);
+    //mainFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), MAIN_FONT_SIZE);
+    //largeFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), LARGE_FONT_SIZE);
+
+    // Carga de la fuente de forma manual (Para soportar Android, ya que fopen no permite abrir assets...)
+
+    // IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
+    void *font_data = NULL;
+    uint64_t font_data_size = 0;
+    font_data = font_load(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), font_data, &font_data_size);
+
+    // If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
+    // NOTE: La memoria de la fuente no es liberada porque solo se carga una vez y al cerrar es limpiada por el OS.
+    // NOTE: Permitir que AddFontFromMemoryTTF() transfiera el ownership al font atlas hace que no se cierre de forma inmediata por estar liberando la memoria.
+    ImFontConfig font_cfg;
+    font_cfg.FontDataOwnedByAtlas = false;
+    mainFont = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, MAIN_FONT_SIZE, &font_cfg);
+    largeFont = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, LARGE_FONT_SIZE, &font_cfg);
     IM_ASSERT(mainFont != NULL);
     IM_ASSERT(largeFont != NULL);
 #endif
 
     
-    SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
-    SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
-    SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
-
     // Permite redimensionar la ventana
     SDL_SetWindowResizable(state->window, SDL_TRUE);
     SDL_SetWindowMinimumSize(state->window, 960, 720);

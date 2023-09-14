@@ -68,5 +68,6 @@ GLuint shaderProgLoad(const char* vertFilename, const char* fragFilename);
 GLuint texture_load(const char* filename);
 void texture_destroy(GLuint texName);
 
+void* font_load(const char *filename, void *font_data, uint64_t *font_data_size);
 
 #endif

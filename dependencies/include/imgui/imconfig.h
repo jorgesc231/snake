@@ -128,4 +128,7 @@ namespace ImGui
 }
 */
 
+// NOTA: En Windows se pasa por linea de comandos, en el resto de plataformas usa este archivo de configuracion.
+#ifndef IMGUI_IMPL_OPENGL_ES2
 #define IMGUI_IMPL_OPENGL_ES2
+#endif
