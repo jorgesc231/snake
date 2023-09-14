@@ -28,8 +28,12 @@
 
 #endif
 
+#if defined(__ANDROID__)
+#include <SDL_opengles2.h>
+#else
 #include <SDL2/SDL_opengles2.h>
 //#include <GLES2/gl2.h>          // Use GL ES 2
+#endif
 
 // Imgui stuff
 #include <imgui.h>
@@ -47,8 +51,8 @@
 void print_gles_errors();
 
 
-// TODO: Por ahora imgui no funciona en la raspberry pi 1 B+
-#if _RPI1
+// TODO: Por ahora imgui no funciona en la raspberry pi 1 B+ ni Android
+#if defined(_RPI1) || defined(__ANDROID__)
 #define ACTIVATE_IMGUI 0
 #else
 #define ACTIVATE_IMGUI 1
@@ -230,7 +234,7 @@ uint32_t init_engine(Game_state *state)
 
 
     // NOTE: Necesario para que SDL2 funcione con ANGLE
-    #if !defined(__EMSCRIPTEN__) || !defined(_RPI1)
+    #if !defined(__EMSCRIPTEN__) || !defined(_RPI1) || !defined(__ANDROID__)
     SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
     //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
     #endif
@@ -245,19 +249,11 @@ uint32_t init_engine(Game_state *state)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     
-    // Request OpenGL ES 2.0 on Raspberry Pi and Web (idk why web does not support GL ES 3.0...)
-    #if _RPI1 || __EMSCRIPTEN__
+
+    // Request OpenGL ES 2.0 context on other devices (ANGLE provides 3.0 context anyway)
     const char* glsl_version = "#version 100";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-
-    #else
-    // Request OpenGL ES 3.0 context on other devices (ANGLE provides 3.0 context anyway)
-    const char* glsl_version = "#version 300 es";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-    #endif
-
 
     
     // Want double-buffering
@@ -332,7 +328,6 @@ uint32_t init_engine(Game_state *state)
     SDL_SetWindowMinimumSize(state->window, 960, 720);
 
     glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
-    //glViewport(0, 0, 1920, 1080);
 
 #ifdef _RPI1
     if (SDL_ShowCursor(SDL_DISABLE));
