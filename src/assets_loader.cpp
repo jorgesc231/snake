@@ -28,18 +28,18 @@ char* data_path(char *path_buffer, char* base_path, const char* asset_path)
 }
 
 
-static size_t get_file_length(FILE *file)
+static size_t get_file_length(SDL_RWops *file)
 {
     size_t length;
     
-    size_t current_pos = ftell(file);
+    size_t current_pos = SDL_RWtell(file);
     
-    fseek(file, 0, SEEK_END);
+    SDL_RWseek(file, 0, SEEK_END);
     
-    length = ftell(file);
+    length = SDL_RWtell(file);
     
     // Return the file to its previous position
-    fseek(file, current_pos, SEEK_SET);
+    SDL_RWseek(file, current_pos, SEEK_SET);
     
     return length;
 }
@@ -49,7 +49,7 @@ static GLuint shader_load(const char *filename, GLenum shader_type)
 {
 	SDL_Log("Loading Shader: %s\n", filename);
 
-    FILE *file = fopen(filename, "r");
+    SDL_RWops *file = SDL_RWFromFile(filename, "r");
     
     if (!file) {
         SDL_Log("Can't open file: %s\n", filename);
@@ -66,16 +66,16 @@ static GLuint shader_load(const char *filename, GLenum shader_type)
     if (!shader_src) {
         
 		SDL_Log("Out of memory when reading file: %s\n", filename);
-		fclose(file);
+		SDL_RWclose(file);
 		file = NULL;
         
 		return 0;
 	}
     
-    fread(shader_src, 1, length, file);
+    SDL_RWread(file, shader_src, 1, length);
     
     // Done with the file
-	fclose(file);
+	SDL_RWclose(file);
 	file = NULL;
     
     
