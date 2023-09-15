@@ -293,7 +293,13 @@ uint32_t init_engine(Game_state *state)
 
     SDL_GL_MakeCurrent(state->window, state->context);
 
+    
+    // Desactiva el VSync solo en Windows (con EMSCRIPTEN es redundante)
+    #if defined(_WIN32) || defined(__EMSCRIPTEN__)
     SDL_GL_SetSwapInterval(0);
+    #else
+    SDL_GL_SetSwapInterval(1);
+    #endif
 
     SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
     SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
