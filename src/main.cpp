@@ -440,6 +440,11 @@ void do_main_loop()
                 state.quit = true;
             }
 
+            if (event.type == SDL_APP_WILLENTERBACKGROUND && state.status != LOST) {
+                state.status = PAUSED;
+                //accept_input = false;
+            }
+
             // Eventos de la ventana
             if (event.type == SDL_WINDOWEVENT) {
                 switch(event.window.event) {
@@ -470,7 +475,7 @@ void do_main_loop()
             }
 
 
-            if (event.type == SDL_KEYDOWN ) {
+            if (event.type == SDL_KEYDOWN || event.type == SDL_FINGERDOWN) {
 
                 // Inicia el juego pulsando cualquier boton, que no sea Escape, F1 y F5, por que se usan para depuracion.
                 if ((event.key.keysym.sym != SDLK_ESCAPE && event.key.keysym.sym != SDLK_F1 && event.key.keysym.sym != SDLK_F5) && !event.key.repeat ) {
@@ -482,58 +487,87 @@ void do_main_loop()
                     state.status = PLAY;
                 }
 
-                if (event.key.keysym.sym == SDLK_UP && !event.key.repeat) {
-                    if (snake[0].direction.x != 0 && snake[0].direction.y != 1 && accept_input) {
-                        
-                        snake[0].direction = (v2){0, -1};
+                // Input del teclado
+                // TODO: Estas variables deberian estar en el estado del juego.
+                bool up = (event.key.keysym.sym == SDLK_UP || event.key.keysym.sym == SDLK_w) && !event.key.repeat;
+                bool down = (event.key.keysym.sym == SDLK_DOWN || event.key.keysym.sym == SDLK_s) && !event.key.repeat;
+                bool right = (event.key.keysym.sym == SDLK_RIGHT || event.key.keysym.sym == SDLK_d) && !event.key.repeat;
+                bool left = (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_a) && !event.key.repeat;
 
-                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
 
-                        accept_input = false;
-                    }
+                // Input tactil
+                // Calcula donde poner los rectangulos de la entrada tactil segun donde empieza la arena de juego
+                // y normaliza los valores porque la entrada tactil va de 0.0 a 1.0.
+                int arena_start = (DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2);
+                int arena_end = arena_start + SQUARE_X * SQUARE_SIZE;
+                float normalized_start = arena_start / (float)DISP_WIDTH;
+                float normalized_end = arena_end / (float)DISP_WIDTH;
 
-                }
-                if (event.key.keysym.sym == SDLK_DOWN && !event.key.repeat) {
-                    if (snake[0].direction.x != 0 && snake[0].direction.y != -1 && accept_input) {
-                        
-                        snake[0].direction = (v2){0, 1};
+                if (event.type == SDL_FINGERDOWN) {
+                    //SDL_Log("%f x %f\n", event.tfinger.x, event.tfinger.y);
 
-                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
-
-                        accept_input = false;
-                    }
-                }
-                if (event.key.keysym.sym == SDLK_RIGHT && !event.key.repeat) {
-                    if (snake[0].direction.x != -1 && snake[0].direction.y != 0 && accept_input) {
-                        
-                        snake[0].direction = (v2){1, 0};
-
-                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
-
-                        accept_input = false;
-                    }
-
-                }
-                if (event.key.keysym.sym == SDLK_LEFT && !event.key.repeat && accept_input) {
-                    if (snake[0].direction.x != 1 && snake[0].direction.y != 0) {
-                        
-                        snake[0].direction = (v2){-1, 0};
-
-                        if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
-
-                        accept_input = false;
-                    }
+                    if (event.tfinger.x >= 0.0f && event.tfinger.x <= normalized_start) left = true;
+                    if (event.tfinger.x > normalized_end && event.tfinger.x <= 1.0f) right = true;
+                    if (event.tfinger.x > normalized_start && event.tfinger.x <= normalized_end && event.tfinger.y <= 0.5f) up = true;
+                    if (event.tfinger.x > normalized_start && event.tfinger.x <= normalized_end && event.tfinger.y > 0.5f) down = true;
                 }
 
 
-                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) {
-                    state.status = PAUSED;
+                if (up && snake[0].direction.x != 0 && snake[0].direction.y != 1 && accept_input) {
+                        
+                    snake[0].direction = (v2){0, -1};
+
+                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
                     accept_input = false;
                 }
-                
 
+
+                if (down && snake[0].direction.x != 0 && snake[0].direction.y != -1 && accept_input) {
+                        
+                    snake[0].direction = (v2){0, 1};
+
+                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
+                    accept_input = false;
+                }
+
+
+                if (right && snake[0].direction.x != -1 && snake[0].direction.y != 0 && accept_input) {
+                        
+                    snake[0].direction = (v2){1, 0};
+
+                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
+                    accept_input = false;
+                }
+
+
+                if (left && snake[0].direction.x != 1 && snake[0].direction.y != 0 && accept_input) {
+                        
+                    snake[0].direction = (v2){-1, 0};
+
+                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
+
+                    accept_input = false;
+                }
+
+
+
+                // Pausa
+                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) {
+                    state.status = PAUSED;
+                    //accept_input = false;
+                }
+                
+                // Muestra el overlay de depuracion
                 if (event.key.keysym.sym == SDLK_F1 && !event.key.repeat) {
                     show_debug_overlay = !show_debug_overlay;
+                }
+
+                // Si el teclado tiene boton de mute o stop, desactiva el audio.
+                if ((event.key.keysym.sym == SDLK_AUDIOMUTE || event.key.keysym.sym == SDLK_AUDIOSTOP) && !event.key.repeat) {
+                    state.audio_enabled = !state.audio_enabled;
                 }
 
                 #ifndef __EMSCRIPTEN__
