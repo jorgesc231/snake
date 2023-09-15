@@ -68,16 +68,22 @@ void print_gles_errors();
 #define SQUARE_X 17
 #define SQUARE_Y 15
 #define SQUARE_SIZE 40
+
+#if defined(__ANDROID__)
+#define MAIN_FONT_SIZE 64.0f
+#define LARGE_FONT_SIZE 128.0f
+#define SCORE_BAR_SIZE 100.0f
+#else
+#define MAIN_FONT_SIZE 28.0f
+#define LARGE_FONT_SIZE 48.0f
 #define SCORE_BAR_SIZE 60.0f
+#endif
 
 #define DEFAULT_TIMESTEP 0.13f
 
 // Colores
 #define DEFAULT_CELL_COLOR1 glm::vec3(0.67f, 0.84f, 0.32f)
 #define DEFAULT_CELL_COLOR2 glm::vec3(0.64f, 0.82f, 0.29f)
-
-#define MAIN_FONT_SIZE 28.0f
-#define LARGE_FONT_SIZE 48.0f
 
 uint32_t DISP_WIDTH = 1280;
 uint32_t DISP_HEIGHT = 720;
@@ -124,11 +130,14 @@ struct Game_state {
     Camera camara;
     batch_renderer renderer;
 
+    glm::vec4 arena = {0, 0, SQUARE_X * SQUARE_SIZE, SQUARE_Y * SQUARE_SIZE};
+
     bool game_over = false;
     bool quit = false;
 
     bool audio_loaded = false;
     bool audio_enabled = true;
+    bool expandir = true;
 
     float time_step = DEFAULT_TIMESTEP;
     int32_t score = 0;
@@ -915,12 +924,38 @@ void game_render(Game_state *state)
     glBindTexture(GL_TEXTURE_2D, state->renderer.textures[0]);
 
     init_main_shader_attribs(&state->renderer);
-    
+
+
     //  Because multiplying matrices occurs from right to left,
     // we transform the matrix in reverse order: translate, rotate, and then scale.
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - ((SQUARE_Y * SQUARE_SIZE) / 2), 0.0f));
-    model = glm::scale(model, glm::vec3(SQUARE_SIZE, SQUARE_SIZE, 0.0f));
+
+    if (state->expandir) {
+        // Target Aspect Ratio
+        float TAR = 17.0f / 15.0f;
+
+        float aspectWidth = DISP_WIDTH - SCORE_BAR_SIZE;
+        float aspectHeight = aspectWidth / TAR;
+
+        if (aspectHeight + SCORE_BAR_SIZE * 2 > DISP_HEIGHT) {
+            // We must switch to pillarbox mode (barras a los lados)
+            aspectHeight = DISP_HEIGHT - SCORE_BAR_SIZE * 2;
+
+            aspectWidth = aspectHeight * TAR;
+        }
+
+        float viewportX = (DISP_WIDTH / 2.0f) - (aspectWidth / 2.0f);
+        float viewportY = (DISP_HEIGHT / 2.0f) - (aspectHeight / 2.0f);
+
+        state->arena = glm::vec4(viewportX, viewportY, aspectWidth, aspectHeight);
+    
+    } else {
+
+        state->arena = glm::vec4((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - ((SQUARE_Y * SQUARE_SIZE) / 2), SQUARE_SIZE * SQUARE_X, SQUARE_SIZE * SQUARE_Y);
+    }
+
+    model = glm::translate(model, glm::vec3(state->arena.x, state->arena.y, 0.0f));
+    model = glm::scale(model, glm::vec3(state->arena.z / SQUARE_X, state->arena.w / SQUARE_Y, 0.0f));  
 
     glm::mat4 mvp = state->camara.projection * state->camara.view * model;
     
@@ -966,27 +1001,36 @@ void draw_score(Game_state *state) {
     //ImGuiIO& io = ImGui::GetIO();
     AtlasSprite sprite = DescAtlas[APPLE];
 
-    ImGui::SetNextWindowPos(ImVec2((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - (SQUARE_Y * SQUARE_SIZE) / 2 - SCORE_BAR_SIZE));
-    //ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(SQUARE_X * SQUARE_SIZE, SCORE_BAR_SIZE));
+    ImGui::SetNextWindowPos(ImVec2(state->arena.x, state->arena.y - SCORE_BAR_SIZE));
+    ImGui::SetNextWindowSize(ImVec2(state->arena.z, SCORE_BAR_SIZE));
 
     // ImGuiWindowFlags_NoBackground
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoInputs;
     ImGui::SetNextWindowBgAlpha(0.4f); // Transparent background
-    ImGui::Begin("Empezar", NULL, window_flags);
+    ImGui::Begin("Score", NULL, window_flags);
 
     ImGui::PushFont(mainFont);
 
     //ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
     ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize("100").x) / 2.f);
+
+
+    // TODO: Tiene que haber una forma menos estupida...
+    int scale_factor = 1;
+
+    #if defined(__ANDROID__)
+    scale_factor = 2;
+    #endif
+
+
     ImGui::Image((void*)(intptr_t)state->renderer.textures[0], 
-        ImVec2(sprite.sourceWidth, sprite.sourceHeight), 
+        ImVec2(sprite.sourceWidth * scale_factor, sprite.sourceHeight * scale_factor), 
         ImVec2(((sprite.positionX) / (float)ATLAS_WIDTH), ((sprite.positionY) / (float)ATLAS_HEIGHT)), 
         ImVec2(((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH), ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT)));
     
     ImGui::SameLine();
     ImVec2 pos = ImGui::GetCursorPos();
-    ImGui::SetCursorPosY(pos.y + (sprite.sourceHeight - MAIN_FONT_SIZE) / 2);
+    ImGui::SetCursorPosY(pos.y + (sprite.sourceHeight * scale_factor - MAIN_FONT_SIZE) / 2);
     ImGui::Text("%d", state->score);
     //ImGui::PopStyleColor();
 
@@ -1074,6 +1118,8 @@ void draw_debug_window(Game_state *state)
 
     ImGui::Checkbox("Audio", &state->audio_enabled);
 
+    ImGui::SameLine();
+    ImGui::Checkbox("Expandir", &state->expandir);
     
     //ImGui::SameLine();
     //ImGui::Checkbox("Colision cuerpo", &audio_enabled);
