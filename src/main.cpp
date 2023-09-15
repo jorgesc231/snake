@@ -36,6 +36,8 @@
 #endif
 
 // Imgui stuff
+#define ACTIVATE_IMGUI 1
+
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
@@ -49,15 +51,6 @@
 
 #define OPENGL_ERROR { GLenum err = glGetError(); IM_ASSERT(err == GL_NO_ERROR); }
 void print_gles_errors();
-
-
-// TODO: Por ahora imgui no funciona en la raspberry pi 1 B+
-#if defined(_RPI1)
-#define ACTIVATE_IMGUI 0
-#else
-#define ACTIVATE_IMGUI 1
-#endif
-
 
 // TODO: Ahora respeta el limite, pero el doble...
 #define FPS 60
@@ -130,7 +123,7 @@ struct Game_state {
     Camera camara;
     batch_renderer renderer;
 
-    glm::vec4 arena = {0, 0, SQUARE_X * SQUARE_SIZE, SQUARE_Y * SQUARE_SIZE};
+    glm::ivec4 arena = {0, 0, SQUARE_X * SQUARE_SIZE, SQUARE_Y * SQUARE_SIZE};
 
     bool game_over = false;
     bool quit = false;
@@ -1257,6 +1250,9 @@ void draw_debug_overlay()
             ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
         else
             ImGui::Text("Mouse Position: <invalid>");
+
+        ImGui::Text("Windows Size: (%d, %d)", DISP_WIDTH, DISP_HEIGHT);
+        ImGui::Text("Viewport Pos: (x = %d, y = %d) \nViewport Size: (w = %d, h = %d)", state.arena.x, state.arena.y, state.arena.w, state.arena.z);
 
 
         ImGui::Separator();
