@@ -130,7 +130,12 @@ struct Game_state {
 
     bool audio_loaded = false;
     bool audio_enabled = true;
+
+    #if defined(_RPI1)
+    bool expandir = false;
+    #else
     bool expandir = true;
+    #endif
 
     float time_step = DEFAULT_TIMESTEP;
     int32_t score = 0;
@@ -294,6 +299,21 @@ uint32_t init_engine(Game_state *state)
     SDL_GL_SetSwapInterval(1);
     #endif
 
+#ifdef _RPI1
+    if (SDL_ShowCursor(SDL_DISABLE));
+
+    if (SDL_SetWindowFullscreen(state->window, SDL_WINDOW_FULLSCREEN)) {
+        SDL_Log("Error al pasar a pantalla completa - %s", SDL_GetError());
+    }
+#else
+    // Permite redimensionar la ventana
+    SDL_SetWindowResizable(state->window, SDL_TRUE);
+    SDL_SetWindowMinimumSize(state->window, 960, 720);
+#endif
+
+    glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
+
+
     SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
     SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
     SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
@@ -346,17 +366,6 @@ uint32_t init_engine(Game_state *state)
 #endif
 
     
-    // Permite redimensionar la ventana
-    SDL_SetWindowResizable(state->window, SDL_TRUE);
-    SDL_SetWindowMinimumSize(state->window, 960, 720);
-
-    glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
-
-#ifdef _RPI1
-    if (SDL_ShowCursor(SDL_DISABLE));
-#endif
-
-
     // Initialize PNG loading
     uint32_t imgFlags = IMG_INIT_PNG;
     if (!(IMG_Init(imgFlags) & imgFlags))
@@ -486,7 +495,10 @@ void do_main_loop()
             if (event.type == SDL_KEYDOWN || event.type == SDL_FINGERDOWN) {
 
                 // Inicia el juego pulsando cualquier boton, que no sea Escape, F1 y F5, por que se usan para depuracion.
-                if ((event.key.keysym.sym != SDLK_ESCAPE && event.key.keysym.sym != SDLK_F1 && event.key.keysym.sym != SDLK_F5) && !event.key.repeat ) {
+                if ((event.key.keysym.sym != SDLK_ESCAPE 
+                    && event.key.keysym.sym != SDLK_F1 && event.key.keysym.sym != SDLK_F2 && event.key.keysym.sym != SDLK_F5 
+                    && event.key.keysym.sym != SDLK_AUDIOMUTE && event.key.keysym.sym != SDLK_AUDIOSTOP) 
+                    && !event.key.repeat ) {
                     
                     if (state.status == LOST) {
                         init_game(&state);            
@@ -573,16 +585,23 @@ void do_main_loop()
                     show_debug_overlay = !show_debug_overlay;
                 }
 
+                // F2 = Activa/Desactiva que se expanda el viewport
+                if (event.key.keysym.sym == SDLK_F2 && !event.key.repeat) {
+                    state.expandir = !state.expandir;
+                }
+
                 // Si el teclado tiene boton de mute o stop, desactiva el audio.
                 if ((event.key.keysym.sym == SDLK_AUDIOMUTE || event.key.keysym.sym == SDLK_AUDIOSTOP) && !event.key.repeat) {
                     state.audio_enabled = !state.audio_enabled;
                 }
 
+                // Cierra el juego con F5
                 #ifndef __EMSCRIPTEN__
                 if (event.key.keysym.sym == SDLK_F5 && !event.key.repeat) {
                     state.quit = true;
                 }
                 #endif
+
             }
         }
         
