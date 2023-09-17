@@ -8,11 +8,12 @@ Ejemplo de como desarrollar un juego usando **OpenGL ES 2** para multiples plata
 
 **Se puede probar aqui:** <https://jorgesc231.github.io/snake/>
 
+
 ### Controles
 
 - **Espacio** -> Iniciar
 - **Escape** -> Pausa
-- **Flechas de direccion** -> Controlar la serpiente
+- **Flechas de direccion o WASD** -> Controlar la serpiente
 - **F1** -> Abrir/Cerrar menu de depuración
 - **F5** -> Cierra el juego
 
@@ -46,10 +47,14 @@ Esto generará el ejecutable del juego llamado: **snake_win32.exe**.
 
 (Por hacer...)
 
+Deberia funciona lo mismo que la Raspberry Pi...
 
 ### Android
 
 (Por hacer...)
+
+*Hay un .apk en releases.*
+
 
 ### WebAssembly
 
@@ -129,17 +134,12 @@ Una vez completado, en la misma terminal ir a la carpeta **src/** del repositori
 build_rpi1.bat
 ```
 
-Deberia generar el binario para la Raspberry Pi, traspasarlo usando **scp** y ejecutarlo.
-
-*NOTA: Por ahora dear imgui no funciona en Raspberry pi.*
+Deberia generar el binario para la Raspberry Pi, traspasarlo junto al directorio de los assets usando **scp** y ejecutarlo.
 
 
 ## TODO
 
 - Ordenar el codigo
-- Port android
-- Corregir el bloqueo de FPS
-- Renderizar texto
-- Aspect ratio
+- Corregir el bloqueo de FPS en Windows
 - Mejora en el procesamiento de entrada
 - Optimizacion
