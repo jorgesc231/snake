@@ -4,204 +4,52 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <math.h>
-
 #include <unistd.h>
 #include <limits.h>
-
 #include <assert.h>
 
-#if defined(__EMSCRIPTEN__) || defined(__ANDROID__)
-#include <SDL.h>
-#include <SDL_image.h>
-//#include <SDL_ttf.h>
-#include <SDL_mixer.h>
-
-#if defined(__EMSCRIPTEN__)
-#include <emscripten.h>
-#endif
-
-#else
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_mixer.h>
-
-#endif
-
-#if defined(__ANDROID__)
-#include <SDL_opengles2.h>
-#else
-#include <SDL2/SDL_opengles2.h>
-//#include <GLES2/gl2.h>          // Use GL ES 2
-#endif
-
-// Imgui stuff
-#define ACTIVATE_IMGUI 1
-
-#include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
 
+#define _IMPLEMENT_TRANSLATE_
+#include "translate.h"
+
+#include "snake.h"
 #include "assets_loader.h"
 #include "renderer.h"
-
-#define MAX_SND_CHANNELS 8
-
-//#define IMGUI_IMPL_OPENGL_DEBUG
-
-#define OPENGL_ERROR { GLenum err = glGetError(); IM_ASSERT(err == GL_NO_ERROR); }
-void print_gles_errors();
-
-// TODO: Ahora respeta el limite, pero el doble...
-#define FPS 60
-#define FRAME_TARGET_TIME (1000.0f / FPS)
-
-
-#define SNAKE_LENGTH 256
-#define SQUARE_X 17
-#define SQUARE_Y 15
-#define SQUARE_SIZE 40
-
-#if defined(__ANDROID__)
-#define MAIN_FONT_SIZE 64.0f
-#define LARGE_FONT_SIZE 128.0f
-#define SCORE_BAR_SIZE 100.0f
-#else
-#define MAIN_FONT_SIZE 28.0f
-#define LARGE_FONT_SIZE 48.0f
-#define SCORE_BAR_SIZE 60.0f
-#endif
-
-#define DEFAULT_TIMESTEP 0.13f
-
-// Colores
-#define DEFAULT_CELL_COLOR1 glm::vec3(0.67f, 0.84f, 0.32f)
-#define DEFAULT_CELL_COLOR2 glm::vec3(0.64f, 0.82f, 0.29f)
-
-uint32_t DISP_WIDTH = 1280;
-uint32_t DISP_HEIGHT = 720;
-
-enum GAME_STATUS {
-    PLAY,
-    PAUSED,
-    LOST,
-};
-
-enum
-{
-    CH_ANY = -1,
-    CH_EAT,
-    CH_MOVE,
-    CH_GAME_OVER
-};
-
-enum
-{
-    SND_SNAKE_EAT,
-    SND_SNAKE_MOVE,
-    SND_SNAKE_DIE,
-    SND_MAX
-};
-
-struct v2 {
-    int32_t x, y;
-};
-
-struct Snake {
-    v2 position;
-    v2 direction;
-    SPRITE_ID sprite;
-};
-
-struct Game_state {
-    char *base_path = NULL;
-    char assets_path_buffer[PATH_MAX];
-
-    SDL_Window* window = NULL;
-    SDL_GLContext context = NULL;
-
-    Camera camara;
-    batch_renderer renderer;
-
-    glm::ivec4 arena = {0, 0, SQUARE_X * SQUARE_SIZE, SQUARE_Y * SQUARE_SIZE};
-
-    bool game_over = false;
-    bool quit = false;
-
-    bool audio_loaded = false;
-    bool audio_enabled = true;
-
-    #if defined(_RPI1)
-    bool expandir = false;
-    #else
-    bool expandir = true;
-    #endif
-
-    float time_step = DEFAULT_TIMESTEP;
-    int32_t score = 0;
-    GAME_STATUS status = PAUSED;
-};
-
-char cwd[PATH_MAX];
-
-Snake snake[SNAKE_LENGTH] = {0};
-int32_t tail_counter = 0;
-
-
-v2 food_pos = {10, 7};
-bool food_active = false;
+#include "gui.h"
 
 Mix_Chunk* sounds[SND_MAX];
 
-Vertex vertices[4000];
+Renderer renderer;
+AssetManager assets;
+Game_state state;
 
 uint64_t prev_time = SDL_GetTicks64();
 
-bool accept_input = true;
-
-// debug gui state
-bool show_demo_window = false;
-bool show_another_window = false;
-bool show_debug_overlay = true;    
-
-glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
-glm::vec3 cell_color1 = DEFAULT_CELL_COLOR1;
-glm::vec3 cell_color2 = DEFAULT_CELL_COLOR2;
-
-ImFont* mainFont= NULL;
-ImFont* largeFont= NULL;
-
-uint32_t init_engine(Game_state *state);
-void do_main_loop();
-void shutdown_app(Game_state *state);
-uint32_t init_game(Game_state *state);
-void update_snake(Snake *snake, Game_state *state);
-void game_render(Game_state *state);
-void draw_debug_overlay();
-void draw_debug_window(Game_state *state);
-void draw_score(Game_state *state);
-void draw_status(Game_state *state);
-
-// Estado del juego
-Game_state state;
-
-
 int main(int argc, char* args[])
 {
-    init_engine(&state);
-    
-#ifndef __EMSCRIPTEN__
+	log_init(&state);
 
-    while (!state.quit) {
-        do_main_loop();
+    init_renderer(&renderer);
+    init_asset_manager(&assets);
+
+    // TODO: Implement a better way of manage errors
+    state.quit = !init_game(&renderer, &state);
+
+#if !defined(__EMSCRIPTEN__)
+
+    while (!state.quit)
+    {
+        main_loop();
     }
     
-    shutdown_app(&state);
+    shutdown_game(&renderer);
 #endif
 
 
-#ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(do_main_loop, 0, 0);
+#if defined(__EMSCRIPTEN__)
+    emscripten_set_main_loop(main_loop, 0, 0);
 #endif
 
 
@@ -209,796 +57,909 @@ int main(int argc, char* args[])
 }
 
 
-uint32_t init_engine(Game_state *state)
+void main_loop()
+{    
+    // The code calculates the elapsedTime in seconds since the last time this code was executed.
+    uint64_t current_time = SDL_GetTicks64();
+    float elapsed_time = (float)(current_time - prev_time) / 1000.0f;
+    prev_time = current_time;  // Prepare for the next frame
+
+    // Process Events
+    process_events(&renderer, &state);
+
+    update_game(&state, elapsed_time);
+
+    render_game(&renderer, &state);
+        
+    print_gles_errors();
+
+    draw_gui(&renderer, &state);
+
+    SDL_GL_SwapWindow(renderer.window);
+
+    //SDL_LogDebug(CATEGORY_GAME_SNAKE, "Current FPS: %f", 1.0f / elapsed_time);
+}
+
+int32_t init_game(Renderer *renderer, Game_state *state)
 {
-    // Inicializa el generador de numeros aleatorios
-    srand(time(0));
-    
-    bool success = false;
+	get_system_language(state);
 
-    if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        SDL_Log("Current working dir: %s\n", cwd);
-    } else {
-        SDL_Log("getcwd() error");
-        return 1;
-    }
-
-    // Contruir el path absoluto hacia los assets
-    if ((state->base_path = SDL_GetBasePath())) {
-        SDL_Log("base path: %s\n", state->base_path);
-
-    } else {
-        // Si no se puede obtener el base path, usamos el CWD como tal
-        #ifdef __ANDROID__
-        // Caso especial para android, no implementa la funcion SDL_GetBasePath()
-        state->base_path = "";
-        #else
-        state->base_path = cwd;
-        #endif
-
-        SDL_Log("No se pudo obtener el Base Path, Usando CWD... base path: %s\n", state->base_path);
-    }
-
-
-    // NOTE: Necesario para que SDL2 funcione con ANGLE
-    #if !defined(__EMSCRIPTEN__) || !defined(_RPI1) || !defined(__ANDROID__)
-    SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
-    //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
-    #endif
-
-    // init SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) < 0) {
-        SDL_Log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-        return EXIT_FAILURE;
-    }
-
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    
-
-    // Request OpenGL ES 2.0 context on other devices (ANGLE provides 3.0 context anyway)
-    const char* glsl_version = "#version 100";
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-
-    
-    // Want double-buffering
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-
-
-    // Create the window
-    state->window = SDL_CreateWindow("Snake2D", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, DISP_WIDTH, DISP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-
-    if (!state->window)
+    if (renderer->device_type == PHONE)
     {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the main window.", NULL);
-        return EXIT_FAILURE;
+        state->controller_type = CONTROLLER_TOUCH;
+        state->selected_level = LEVEL_PHONE;
     }
-
-    // Create OpenGL context
-    state->context = SDL_GL_CreateContext(state->window);
-    
-    if (!state->context)
+    else
     {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the OpenGL context.", NULL);
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "[SDL] GL context creation failed!");
-        return EXIT_FAILURE;
+        state->controller_type = CONTROLLER_KEYBOARD;
+        state->selected_level = LEVEL_DEFAULT;
     }
 
-    SDL_GL_MakeCurrent(state->window, state->context);
+    init_levels (state);
 
-    
-    // Desactiva el VSync solo en Windows (con EMSCRIPTEN es redundante)
-    #if defined(_WIN32) || defined(__EMSCRIPTEN__)
-    SDL_GL_SetSwapInterval(0);
-    #else
-    SDL_GL_SetSwapInterval(1);
-    #endif
-
-#ifdef _RPI1
-    if (SDL_ShowCursor(SDL_DISABLE));
-
-    if (SDL_SetWindowFullscreen(state->window, SDL_WINDOW_FULLSCREEN)) {
-        SDL_Log("Error al pasar a pantalla completa - %s", SDL_GetError());
-    }
-#else
-    // Permite redimensionar la ventana
-    SDL_SetWindowResizable(state->window, SDL_TRUE);
-    SDL_SetWindowMinimumSize(state->window, 960, 720);
+    // TODO: solucion temporal...
+#if !defined(__EMSCRIPTEN__)
+    load_state_file(&assets, CONFIG_FILE_NAME, state);
 #endif
 
-    glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
+    change_level(state, state->selected_level);
 
+    calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
 
-    SDL_Log("GL_VERSION = %s\n",  glGetString(GL_VERSION));
-    SDL_Log("GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
-    SDL_Log("GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
+    print_gles_errors();
 
+    // Load Texture and Shaders
+    renderer->textures[0] = texture_load(&assets, "graphics/atlas.png");
 
-#if ACTIVATE_IMGUI
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    print_gles_errors();
 
+    renderer->shaders[TEXTURE_SHADER] = shader_prog_load(&assets, "shaders/texture.vertex", "shaders/texture.fragment");
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
+    print_gles_errors();
 
-    // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(state->window, state->context);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    // TODO: No se ejecutan estos asserts a pesar de estar definido NDEBUG...
+#if defined(NDEBUG)
+    assert(renderer->textures[0]);
+    assert(renderer->shaders[TEXTURE_SHADER]);
+#endif
 
-    //#ifdef __EMSCRIPTEN__
-    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
-    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
-    io.IniFilename = nullptr;
-    //#endif
+    if (!renderer->textures[0] || !renderer->shaders[TEXTURE_SHADER])
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't load game assets.", NULL);
+        return 0;
+    }
 
+    glUseProgram(renderer->shaders[TEXTURE_SHADER]);
 
+    init_main_shader_attribs(renderer);
+
+    // Get the uniform location
+    renderer->AttribLocationProjMtx = glGetUniformLocation(renderer->shaders[TEXTURE_SHADER], "u_Projection");
+    if (renderer->AttribLocationProjMtx < 0)
+    {
+        SDL_LogError(CATEGORY_GAME_SNAKE, "ERROR: Couldn't get \"MVP\" uniform location\n");
+        assert(0);
+    }
+
+    glBindTexture(GL_TEXTURE_2D, renderer->textures[0]);
+    
+    GLint tex_sampler_uniform_loc = glGetUniformLocation(renderer->shaders[TEXTURE_SHADER], "texSampler");
+    if (tex_sampler_uniform_loc < 0)
+    {
+        SDL_LogError(CATEGORY_GAME_SNAKE, "ERROR: Couldn't get \"texSampler\" uniform location\n");
+        assert(0);
+    }
+    
+    // Set Uniform to texture unit 0
+    glUniform1i(tex_sampler_uniform_loc, 0);
+    
+    // Inicializa el audio
+    if (init_audio(sounds, SND_MAX))
+    {
+        // TODO: Reportar errores si no se puede cargar el audio...
+        sounds[SND_SNAKE_EAT] = Mix_LoadWAV(get_data_path(&assets, "sound/food.mp3"));
+        sounds[SND_INTERACTION] = Mix_LoadWAV(get_data_path(&assets, "sound/move.mp3"));
+        sounds[SND_SNAKE_DIE] = Mix_LoadWAV(get_data_path(&assets, "sound/gameover_short.mp3"));
+
+        state->audio_loaded = sounds[SND_SNAKE_EAT] && sounds[SND_INTERACTION] && sounds[SND_SNAKE_DIE];
+    }
+    else
+    {
+        state->audio_loaded = false;
+        state->audio_enabled = false;
+        SDL_LogError(CATEGORY_GAME_SNAKE, "Unable to load audio");
+    }
+
+    
     // Load the fonts
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.Fonts->AddFontDefault();
-    //mainFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), MAIN_FONT_SIZE);
-    //largeFont = io.Fonts->AddFontFromFileTTF(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), LARGE_FONT_SIZE);
-
-    // Carga de la fuente de forma manual (Para soportar Android, ya que fopen no permite abrir assets...)
 
     // IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
     void *font_data = NULL;
-    uint64_t font_data_size = 0;
-    font_data = font_load(data_path(state->assets_path_buffer, state->base_path, "graphics/Bungee-Regular.ttf"), font_data, &font_data_size);
+    int32_t font_data_size = 0;
+    font_data = load_font(&assets, "graphics/Bungee-Regular.ttf", font_data, &font_data_size);
+
+    if (!font_data)
+    {
+    	SDL_LogError(CATEGORY_GAME_SNAKE, "Couldn't load font");
+    	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Couldn't load font", NULL);
+    	return 0;
+    }
+
+    print_gles_errors();
 
     // If you want to keep ownership of the data and free it yourself, you need to clear the FontDataOwnedByAtlas field
     // NOTE: La memoria de la fuente no es liberada porque solo se carga una vez y al cerrar es limpiada por el OS.
     // NOTE: Permitir que AddFontFromMemoryTTF() transfiera el ownership al font atlas hace que no se cierre de forma inmediata por estar liberando la memoria.
     ImFontConfig font_cfg;
     font_cfg.FontDataOwnedByAtlas = false;
-    mainFont = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, MAIN_FONT_SIZE, &font_cfg);
-    largeFont = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, LARGE_FONT_SIZE, &font_cfg);
-    IM_ASSERT(mainFont != NULL);
-    IM_ASSERT(largeFont != NULL);
+#if defined(NDEBUG)
+    renderer->font_debug = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, &font_cfg);
+    IM_ASSERT(renderer->font_debug != NULL);
 #endif
+    renderer->font_main = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, MAIN_FONT_SIZE, &font_cfg);
+    renderer->font_large = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, LARGE_FONT_SIZE, &font_cfg);
+    renderer->font_title = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, TITLE_FONT_SIZE, &font_cfg);
 
+    IM_ASSERT(renderer->font_main != NULL);
+    IM_ASSERT(renderer->font_large != NULL);
+    IM_ASSERT(renderer->font_title != NULL);
     
-    // Initialize PNG loading
-    uint32_t imgFlags = IMG_INIT_PNG;
-    if (!(IMG_Init(imgFlags) & imgFlags))
-    {
-        printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
-        
-        assert(false);
-        
-        return false;
-    }
-
-    // Inicializa SDL_Mixer
-    uint32_t flags = MIX_INIT_MP3;
-    uint32_t initted = Mix_Init (flags);
-    if ((initted & flags) != flags)
-    {
-        fprintf(stderr, "Error al inicializar SDL_Mix: %s\n", Mix_GetError());
-        
-    } else {
-
-        if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) == -1)
-        {
-            printf("Couldn't initialize SDL Mixer\n");
-            exit(1);
-        }
-
-        Mix_AllocateChannels(MAX_SND_CHANNELS);
-
-        memset(sounds, 0, sizeof(Mix_Chunk*) * SND_MAX);
-
-        // TODO: Reportar errores si no se puede cargar el audio...
-        //sounds[SND_SNAKE_EAT] = Mix_LoadWAV("../assets/sound/food.mp3");
-        sounds[SND_SNAKE_EAT] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/food.mp3"));
-        sounds[SND_SNAKE_MOVE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/move.mp3"));
-        sounds[SND_SNAKE_DIE] = Mix_LoadWAV(data_path(state->assets_path_buffer, state->base_path, "sound/gameover.mp3"));
-
-        state->audio_loaded = sounds[SND_SNAKE_EAT] && sounds[SND_SNAKE_MOVE] && sounds[SND_SNAKE_DIE];
-    }
-
-
-
-    // Inicializa el renderer
-    init_camera_2d(&state->camara, DISP_WIDTH, DISP_HEIGHT, glm::vec2(0, 0));
-    init_batch_renderer(&state->renderer, state->assets_path_buffer, state->base_path);
-
-    print_gles_errors();
-
-
-    // Inicializa el juego
-    // TODO: Deberia estar separado de la inicializacion del engine
-    init_game(state);
-
-    print_gles_errors();
-    
-    update_snake(snake, state);
-
-    return success;
-}
-
-void do_main_loop()
-{    
-    // The code calculates the elapsedTime in seconds since the last time this code was executed.
-    uint64_t current_time = SDL_GetTicks64();
-    double time_to_wait = FRAME_TARGET_TIME - (current_time - prev_time);
-        
-    // NOTE: Esto no es necesario en WEB
-    #ifndef __EMSCRIPTEN__
-    if (time_to_wait > 0.0f && time_to_wait < FRAME_TARGET_TIME) {
-        SDL_Delay(time_to_wait);
-        //SDL_Log("%f", time_to_wait);
-    }
-    #endif
-
-    double elapsed_time = (double)(current_time - prev_time) / 1000.0f;
-
-    prev_time = current_time;  // Prepare for the next frame
-
-
-        // Process Events
-        SDL_Event event;
-        
-        while(SDL_PollEvent(&event)) {
-
-#if ACTIVATE_IMGUI
-            ImGui_ImplSDL2_ProcessEvent(&event);
-#endif
-
-            if (event.type == SDL_QUIT) {
-                state.quit = true;
-            }
-
-            if (event.type == SDL_APP_WILLENTERBACKGROUND && state.status != LOST) {
-                state.status = PAUSED;
-                //accept_input = false;
-            }
-
-            // Eventos de la ventana
-            if (event.type == SDL_WINDOWEVENT) {
-                switch(event.window.event) {
-                    case SDL_WINDOWEVENT_SHOWN:
-                    {
-                        SDL_Log("SDL_WINDOWEVENT_SHOW");
-                    } break;
-
-                    case SDL_WINDOWEVENT_RESIZED:
-                    {
-                        SDL_Log("Window %d resize to %dx%d\n", event.window.windowID,
-                                event.window.data1, event.window.data2);
-                    } break;
-
-                    case SDL_WINDOWEVENT_SIZE_CHANGED:
-                    {
-                        SDL_Log("Window %d size changed to %dx%d\n", event.window.windowID, event.window.data1, event.window.data2);
-                        
-                        DISP_WIDTH = event.window.data1;
-                        DISP_HEIGHT = event.window.data2;
-                        
-                        glViewport(0, 0, DISP_WIDTH, DISP_HEIGHT);
-
-                        init_camera_2d(&state.camara, DISP_WIDTH, DISP_HEIGHT, glm::vec2(0, 0));
-
-                    } break;
-                }
-            }
-
-
-            if (event.type == SDL_KEYDOWN || event.type == SDL_FINGERDOWN) {
-
-                // Inicia el juego pulsando cualquier boton, que no sea Escape, F1 y F5, por que se usan para depuracion.
-                if ((event.key.keysym.sym != SDLK_ESCAPE 
-                    && event.key.keysym.sym != SDLK_F1 && event.key.keysym.sym != SDLK_F2 && event.key.keysym.sym != SDLK_F5 
-                    && event.key.keysym.sym != SDLK_AUDIOMUTE && event.key.keysym.sym != SDLK_AUDIOSTOP) 
-                    && !event.key.repeat ) {
-                    
-                    if (state.status == LOST) {
-                        init_game(&state);            
-                    }                
-
-                    state.status = PLAY;
-                }
-
-                // Input del teclado
-                // TODO: Estas variables deberian estar en el estado del juego.
-                bool up = (event.key.keysym.sym == SDLK_UP || event.key.keysym.sym == SDLK_w) && !event.key.repeat;
-                bool down = (event.key.keysym.sym == SDLK_DOWN || event.key.keysym.sym == SDLK_s) && !event.key.repeat;
-                bool right = (event.key.keysym.sym == SDLK_RIGHT || event.key.keysym.sym == SDLK_d) && !event.key.repeat;
-                bool left = (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_a) && !event.key.repeat;
-
-
-                // Input tactil
-                // Calcula donde poner los rectangulos de la entrada tactil segun donde empieza la arena de juego
-                // y normaliza los valores porque la entrada tactil va de 0.0 a 1.0.
-                int arena_start = (DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2);
-                int arena_end = arena_start + SQUARE_X * SQUARE_SIZE;
-                float normalized_start = arena_start / (float)DISP_WIDTH;
-                float normalized_end = arena_end / (float)DISP_WIDTH;
-
-                if (event.type == SDL_FINGERDOWN) {
-                    //SDL_Log("%f x %f\n", event.tfinger.x, event.tfinger.y);
-
-                    if (event.tfinger.x >= 0.0f && event.tfinger.x <= normalized_start) left = true;
-                    if (event.tfinger.x > normalized_end && event.tfinger.x <= 1.0f) right = true;
-                    if (event.tfinger.x > normalized_start && event.tfinger.x <= normalized_end && event.tfinger.y <= 0.5f) up = true;
-                    if (event.tfinger.x > normalized_start && event.tfinger.x <= normalized_end && event.tfinger.y > 0.5f) down = true;
-                }
-
-
-                if (up && snake[0].direction.x != 0 && snake[0].direction.y != 1 && accept_input) {
-                        
-                    snake[0].direction = (v2){0, -1};
-
-                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
-
-                    accept_input = false;
-                }
-
-
-                if (down && snake[0].direction.x != 0 && snake[0].direction.y != -1 && accept_input) {
-                        
-                    snake[0].direction = (v2){0, 1};
-
-                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
-
-                    accept_input = false;
-                }
-
-
-                if (right && snake[0].direction.x != -1 && snake[0].direction.y != 0 && accept_input) {
-                        
-                    snake[0].direction = (v2){1, 0};
-
-                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
-
-                    accept_input = false;
-                }
-
-
-                if (left && snake[0].direction.x != 1 && snake[0].direction.y != 0 && accept_input) {
-                        
-                    snake[0].direction = (v2){-1, 0};
-
-                    if (state.audio_enabled) Mix_PlayChannel(CH_MOVE, sounds[SND_SNAKE_MOVE], 0);
-
-                    accept_input = false;
-                }
-
-
-
-                // Pausa
-                if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state.status != LOST) {
-                    state.status = PAUSED;
-                    //accept_input = false;
-                }
-                
-                // Muestra el overlay de depuracion
-                if (event.key.keysym.sym == SDLK_F1 && !event.key.repeat) {
-                    show_debug_overlay = !show_debug_overlay;
-                }
-
-                // F2 = Activa/Desactiva que se expanda el viewport
-                if (event.key.keysym.sym == SDLK_F2 && !event.key.repeat) {
-                    state.expandir = !state.expandir;
-                }
-
-                // Si el teclado tiene boton de mute o stop, desactiva el audio.
-                if ((event.key.keysym.sym == SDLK_AUDIOMUTE || event.key.keysym.sym == SDLK_AUDIOSTOP) && !event.key.repeat) {
-                    state.audio_enabled = !state.audio_enabled;
-                }
-
-                // Cierra el juego con F5
-                #ifndef __EMSCRIPTEN__
-                if (event.key.keysym.sym == SDLK_F5 && !event.key.repeat) {
-                    state.quit = true;
-                }
-                #endif
-
-            }
-        }
-        
-
-        static float tiempo = 0;
-        tiempo += elapsed_time;
-
-
-        // Actualizacion de estado del juego
-
-        if (tiempo > state.time_step && state.status == PLAY) {    
-
-            update_snake(snake, &state);
-
-            // Food Collision
-            if ((snake[0].position.x == food_pos.x && snake[0].position.y == food_pos.y))
-            {
-                tail_counter += 1;
-                state.score += 1;
-                food_active = false;
-
-                if (state.audio_enabled) Mix_PlayChannel(CH_EAT, sounds[SND_SNAKE_EAT], 0);
-            }
-
-
-            tiempo = 0;
-            accept_input = true;
-        }
-
-
-        // Food position calculation
-        if (!food_active)
-        {
-            food_active = true;
-
-            int loop_counter = 0;
-
-            food_pos.x = rand() % SQUARE_X;
-            food_pos.y = rand() % SQUARE_Y;
-
-            for (int i = 0; i < tail_counter; i++)
-            {
-                while ((food_pos.x == snake[i].position.x) && (food_pos.y == snake[i].position.y))
-                {
-                    food_pos.x = rand() % SQUARE_X;
-                    food_pos.y = rand() % SQUARE_Y;
-                    
-                    i = 0;
-                    loop_counter++;
-
-#ifdef NDEBUG
-                    SDL_Log("snake: x = %d - y = %d", snake[i].position.x, snake[i].position.y);
-                    SDL_Log("food:  x = %d - y = %d", food_pos.x, food_pos.y);
-#endif
-
-                }
-            }
-
-#ifdef NDEBUG
-            //SDL_Log("loop counter: %d", loop_counter);
-#endif
-
-        }
-
-
-        if (state.status == LOST && state.game_over) {
-            
-            if (state.audio_enabled) Mix_PlayChannel(CH_GAME_OVER, sounds[SND_SNAKE_DIE], 0);
-
-            state.game_over = false;
-        }
-
-        // Renderizar
-        game_render(&state);
-        print_gles_errors();
-
-#if ACTIVATE_IMGUI
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
-
-
-        draw_score(&state);
-        
-        if (state.status != PLAY) draw_status(&state);
-
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
-
-        if (show_debug_overlay) {
-            draw_debug_window(&state);
-            draw_debug_overlay();
-        }
-
-        print_gles_errors();
-        
-
-        // Rendering
-        ImGui::Render();
-        ImGuiIO& io = ImGui::GetIO();
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-        //glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-#endif
-
-
-        print_gles_errors();
-
-
-        // Actualiza la ventana
-        SDL_GL_SwapWindow(state.window);
-
-        //SDL_Log("Current FPS: %f", 1.0f / elapsed_time);
-}
-
-
-// TODO: Falta...
-void shutdown_app(Game_state *my_state)
-{
-#if ACTIVATE_IMGUI
-    // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-
-#endif
-
-    SDL_GL_DeleteContext(my_state->context);
-    SDL_DestroyWindow(my_state->window);
-    SDL_Quit();
-}
-
-uint32_t init_game(Game_state *state)
-{
-    state->score = 0;
-    state->status = PAUSED;
-
-    for (int i = 0; i < SNAKE_LENGTH; i++) {
-        snake[i].position = (v2){0, 0};
-        snake[i].direction = (v2){0, 0};
-        snake[i].sprite = NO_TEXTURE;
-    }
-
-    tail_counter = 3;
-    snake[0].position = (v2){4, 7};
-    snake[0].direction = (v2){ 1, 0 };
-
-    for (int i = 1; i < tail_counter; i++) {
-        snake[i].position.x = snake[i - 1].position.x - 1;
-        snake[i].position.y = snake[i - 1].position.y;
-        snake[i].direction = (v2){ 1, 0 };
-    }
-
-    food_pos.x = 11;
-    food_pos.y = 7;
-    food_active = true;
+    set_game_state(state);
+    update_snake(state);
 
     return 1;
 }
 
-
-void update_snake(Snake *snake, Game_state *state) 
+void process_events(Renderer *renderer, Game_state *state)
 {
-    // Deteccion de colisiones
-    if (snake[0].position.x >= 0 && snake[0].position.y >= 0 && snake[0].position.x <= SQUARE_X - 1 && snake[0].position.y <= SQUARE_Y - 1) {
+    SDL_Event event;
+        
+    while(SDL_PollEvent(&event))
+    {
+        ImGui_ImplSDL2_ProcessEvent(&event);
 
-        for (int i = tail_counter - 1; i >= 0; i--) {
-
-            // Cabeza
-            if (i == 0) {
-
-                if (snake[i].direction.x == 1 && snake[i].direction.y == 0) {
-                    snake[i].sprite = HEAD_RIGHT;
-                }
-
-                if (snake[i].direction.x == -1 && snake[i].direction.y == 0) {
-                    snake[i].sprite = HEAD_LEFT;
-                }
-
-                if (snake[i].direction.x == 0 && snake[i].direction.y == 1) {
-                    snake[i].sprite = HEAD_DOWN;
-                }
-
-                if (snake[i].direction.x == 0 && snake[i].direction.y == -1) {
-                    snake[i].sprite = HEAD_UP;
-                }
-            }
-            else {
-
-                // TODO: en el caso de la cola lee memoria anterior
-                snake[i].position = snake[i - 1].position;
-                snake[i].direction = snake[i - 1].direction;
-
-                // Cola
-                if (i == tail_counter - 1) {
-                
-                    if (snake[i].direction.x == 0 && snake[i].direction.y == -1) {
-                       snake[i].sprite = TAIL_DOWN;
-                    }
-
-                    if (snake[i].direction.x == 0 && snake[i].direction.y == 1) {
-                       snake[i].sprite = TAIL_UP;
-                    }
-
-                    if (snake[i].direction.x == 1 && snake[i].direction.y == 0) {
-                       snake[i].sprite = TAIL_LEFT;
-                    }
-
-                    if (snake[i].direction.x == -1 && snake[i].direction.y == 0) {
-                       snake[i].sprite = TAIL_RIGHT;
-                    }
-
-                // Cuerpo
-                } else {
-
-                    if (snake[i].direction.x == 0 && (snake[i].direction.y == -1 || snake[i].direction.y == 1)) {
-                       snake[i].sprite = BODY_VERTICAL;
-                    }
-
-                    if (snake[i].direction.y == 0 && (snake[i].direction.x == -1 || snake[i].direction.x == 1)) {
-                       snake[i].sprite = BODY_HORIZONTAL;
-                    }
-
-                    if ((snake[i].direction.x == 0 && snake[i].direction.y == 1) && (snake[i + 1].direction.x == 1 && snake[i + 1].direction.y == 0)) {
-                        snake[i].sprite = BODY_BOTTOMLEFT;   
-                    }
-
-                    if ((snake[i].direction.x == 1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == 1)) {
-                        snake[i].sprite = BODY_TOPRIGHT;   
-                    }
-
-                    if ((snake[i].direction.x == -1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == 1)) {
-                        snake[i].sprite = BODY_TOPLEFT;   
-                    }
-
-                    if ((snake[i].direction.x == 0 && snake[i].direction.y == -1) && (snake[i + 1].direction.x == 1 && snake[i + 1].direction.y == 0)) {
-                        snake[i].sprite = BODY_TOPLEFT;   
-                    }
-
-                    if ((snake[i].direction.x == 0 && snake[i].direction.y == -1) && (snake[i + 1].direction.x == -1 && snake[i + 1].direction.y == 0)) {
-                        snake[i].sprite = BODY_TOPRIGHT;   
-                    }
-
-                    if ((snake[i].direction.x == 1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == -1)) {
-                        snake[i].sprite = BODY_BOTTOMRIGHT;   
-                    }
-
-                    if ((snake[i].direction.x == -1 && snake[i].direction.y == 0) && (snake[i + 1].direction.x == 0 && snake[i + 1].direction.y == -1)) {
-                        snake[i].sprite = BODY_BOTTOMLEFT;   
-                    }
-
-                    if ((snake[i].direction.x == 0 && snake[i].direction.y == 1) && (snake[i + 1].direction.x == -1 && snake[i + 1].direction.y == 0)) {
-                        snake[i].sprite = BODY_BOTTOMRIGHT;   
-                    }
-
-                }
-            }
-
+        if (event.type == SDL_QUIT)
+        {
+            state->quit = true;
         }
 
-        snake[0].position.x += snake[0].direction.x;
-        snake[0].position.y += snake[0].direction.y;
+        if (event.type == SDL_APP_WILLENTERBACKGROUND)
+        {
+        	if (state->status != LOST && state->status != INIT && state->status != PAUSED)
+        	{
+            	state->status = PAUSED;
+                state->accept_input = false;
+        	}
+#if !defined(__EMSCRIPTEN__)
+        	write_state_file(&assets, CONFIG_FILE_NAME, state);
+#endif
+        }
 
-        for (int i = 1; i < tail_counter; i++) {
-            if (snake[0].position.x == snake[i].position.x && snake[0].position.y == snake[i].position.y) {
-                
-    #if NDEBUG
-                SDL_Log("Colision con el seg: %d", i);
-    #endif
+        if (event.type == SDL_APP_DIDENTERBACKGROUND)
+        {
+        	// TODO: implement
+        }
 
-                state->status = LOST;
-                state->game_over = true;
+        if (event.type == SDL_APP_WILLENTERFOREGROUND)
+        {
+        	// TODO: implement
+        }
+
+        if (event.type == SDL_APP_DIDENTERFOREGROUND)
+        {
+        	// TODO: implement
+        }
+
+        if (event.type == SDL_APP_TERMINATING)
+        {
+#if !defined(__EMSCRIPTEN__)
+        	write_state_file(&assets, CONFIG_FILE_NAME, state);
+#endif
+        }
+
+        // Eventos de la ventana
+        if (event.type == SDL_WINDOWEVENT)
+        {
+            switch(event.window.event)
+            {
+                case SDL_WINDOWEVENT_SIZE_CHANGED:
+                case SDL_WINDOWEVENT_RESIZED:
+                {
+                    SDL_LogDebug(CATEGORY_GAME_SNAKE, "Window %d size changed to %dx%d\n", event.window.windowID, event.window.data1, event.window.data2);
+
+                    if (event.window.data1 != renderer->DISP_WIDTH || event.window.data2 != renderer->DISP_HEIGHT)
+                    {
+                        renderer->DISP_WIDTH = event.window.data1;
+                        renderer->DISP_HEIGHT = event.window.data2;
+
+                        glViewport(0, 0, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+
+                        init_camera_2d(&renderer->camera, renderer->DISP_WIDTH, renderer->DISP_HEIGHT, glm::vec2(0, 0));
+
+                        calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                    }
+                } break;
+
+                case SDL_WINDOWEVENT_CLOSE:
+                {
+                    state->quit = true;
+                } break;
+
+                case SDL_WINDOWEVENT_FOCUS_GAINED:
+                {
+
+                } break;
+
+                case SDL_WINDOWEVENT_RESTORED:
+                {
+
+                } break;
+
+                case SDL_WINDOWEVENT_FOCUS_LOST:
+                {
+
+                } break;
             }
         }
-    } else {
-        state->status = LOST; 
-        state->game_over = true;
+
+			// TODO: Tiene que haber una mejor forma
+			// TOUCH3 is active
+			bool control3_active = state->controller_type == CONTROLLER_TOUCH3;
+
+			// Mouse and Touch Input
+			if ((event.type == SDL_MOUSEBUTTONDOWN  && (event.button.button & SDL_BUTTON_LEFT)) || event.type == SDL_FINGERDOWN)
+			{
+                int32_t x = event.button.x;
+                int32_t y = event.button.y;
+
+                // la entrada tactil va de 0.0 a 1.0.
+                if (event.type == SDL_FINGERDOWN)
+                {
+                	x = (int32_t)(event.tfinger.x * renderer->DISP_WIDTH);
+                	y = (int32_t)(event.tfinger.y * renderer->DISP_HEIGHT);
+                	SDL_LogDebug(CATEGORY_GAME_SNAKE, "normalized %f x %f \t window %dx%d\n", event.tfinger.x, event.tfinger.y, x, y);
+                }
+
+				if (is_over(state->touch_input_rects[TOUCH_INPUT_UP], x, y) ||
+						(control3_active && is_over_triangle(state->touch_input_triangles[TOUCH_INPUT_UP], x, y)))
+				{
+					add_input(state, DIR_UP);
+				}
+
+				if (is_over(state->touch_input_rects[TOUCH_INPUT_DOWN], x, y) ||
+						(control3_active && is_over_triangle(state->touch_input_triangles[TOUCH_INPUT_DOWN], x, y)))
+				{
+					add_input(state, DIR_DOWN);
+				}
+
+				if (is_over(state->touch_input_rects[TOUCH_INPUT_RIGHT], x, y) ||
+						(control3_active && is_over_triangle(state->touch_input_triangles[TOUCH_INPUT_RIGHT], x, y)))
+				{
+					add_input(state, DIR_RIGHT);
+				}
+
+				if (is_over(state->touch_input_rects[TOUCH_INPUT_LEFT], x, y) ||
+						(control3_active && is_over_triangle(state->touch_input_triangles[TOUCH_INPUT_LEFT], x, y)))
+				{
+					add_input(state, DIR_LEFT);
+				}
+			}
+
+        if ((event.type == SDL_MOUSEBUTTONUP  && (event.button.button & SDL_BUTTON_LEFT)) || event.type == SDL_FINGERUP)
+        {
+            state->input_dir = DIR_NONE;
+        }
+
+        if (event.type == SDL_KEYDOWN)
+        {
+            // Input del teclado
+            if ((event.key.keysym.sym == SDLK_UP || event.key.keysym.sym == SDLK_w) && !event.key.repeat)
+            {
+               add_input(state, DIR_UP);
+            }
+
+            if ((event.key.keysym.sym == SDLK_DOWN || event.key.keysym.sym == SDLK_s) && !event.key.repeat)
+            {
+                add_input(state, DIR_DOWN);
+            }
+
+            if ((event.key.keysym.sym == SDLK_RIGHT || event.key.keysym.sym == SDLK_d) && !event.key.repeat)
+            {
+                add_input(state, DIR_RIGHT);
+            }
+
+            if ((event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_a) && !event.key.repeat)
+            {
+                add_input(state, DIR_LEFT);
+            }
+
+            // Pausa con escape
+            if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state->status != LOST)
+            {
+              	if (state->audio_enabled) Mix_PlayChannel(CH_INTERACTION, sounds[SND_INTERACTION], 0);
+
+               	if (state->status != PAUSED && state->status != INIT)
+               	{
+                    state->status = PAUSED;
+                    state->accept_input = false;
+                    state->show_menu = false;
+              	}
+               	else
+               	{
+                    state->status = PLAY;
+                    state->accept_input = true;
+              	}
+
+            }
+
+#if defined(NDEBUG)
+            // Muestra el overlay de depuracion con F1
+            if (event.key.keysym.sym == SDLK_F1 && !event.key.repeat)
+            {
+                state->show_debug_overlay = !state->show_debug_overlay;
+            }
+
+            // Oculta la pantalla de status con F2
+            if (event.key.keysym.sym == SDLK_F2 && !event.key.repeat)
+            {
+                state->show_status_screen = !state->show_status_screen;
+            }
+
+            // Cierra el juego con F5
+            #ifndef __EMSCRIPTEN__
+            if (event.key.keysym.sym == SDLK_F5 && !event.key.repeat)
+            {
+                state->quit = true;
+            }
+            #endif
+#endif
+
+            // Si el teclado tiene boton de mute o stop, desactiva el audio.
+            if ((event.key.keysym.sym == SDLK_AUDIOMUTE || event.key.keysym.sym == SDLK_AUDIOSTOP) && !event.key.repeat)
+            {
+                state->audio_enabled = !state->audio_enabled;
+            }
+        }
+
+        // TODO: Inplementar swipes
+#if 0
+        if (event.type == SDL_FINGERMOTION)
+        {
+            SDL_Log("Finger Motion: x = %f y = %f dx = %f dy = %f", event.tfinger.x, event.tfinger.y, event.tfinger.dx, event.tfinger.dy);
+
+            float adx = abs(event.tfinger.dx);
+            float ady = abs(event.tfinger.dy);
+
+            //float TOUCH_THRESHOLD_X = 20 * (1 / (float)renderer->DISP_WIDTH);
+            //float TOUCH_THRESHOLD_Y = 20 * (1 / (float)renderer->DISP_HEIGHT);
+
+            float TOUCH_THRESHOLD_X = event.tfinger.dx / 4;
+            float TOUCH_THRESHOLD_Y = event.tfinger.dy / 4;
+
+            // swite horizontal
+            if (adx > ady && adx > TOUCH_THRESHOLD_X)
+            {
+                if (0 > event.tfinger.dx) // swipe right to left
+                {
+                    SDL_Log("Swipe Left");
+                    add_input(state, DIR_LEFT);
+
+                }
+                else  // swipe left to right
+                {
+                    SDL_Log("Swipe Right");
+                    add_input(state, DIR_RIGHT);
+                }
+            } else if (ady > adx && ady > TOUCH_THRESHOLD_Y)
+            {
+                if (0 > event.tfinger.dy) // swipe bottom to top
+                {
+                    SDL_Log("Swipe Top");
+                    add_input(state, DIR_UP);
+                }
+                else // swipe top to bottom
+                {
+                    SDL_Log("Swipe Bottom");
+                    add_input(state, DIR_DOWN);
+                }
+            }
+
+
+        }
+#endif
+    }
+
+    // Save state before quit
+    if (state->quit)
+    {
+#if !defined(__EMSCRIPTEN__)
+    	write_state_file(&assets, CONFIG_FILE_NAME, state);
+#endif
     }
 }
 
-void game_render(Game_state *state)
+void set_game_state(Game_state *state)
 {
-    //uint32_t indexCount = 0;
-    GLushort indexCount = 0;
-    uint32_t vertexCount = 0;
-    
-    Vertex* buffer = vertices;
+    state->score = 0;
+    state->status = INIT;
+    state->time_out_completed = false;
+    state->accept_input = false;
 
-    // Draw the cells    
-    bool cambiar = false;
-
-    for (int y = 0; y < SQUARE_Y; y++)
+    switch (state->difficulty)
     {
-        for (int x = 0; x < SQUARE_X; x++)
-        {
-            if (cambiar) {
-                buffer = create_color_quad(buffer, glm::vec2(x, y), cell_color2);
-                cambiar = false;
-            } else {
-                buffer = create_color_quad(buffer, glm::vec2(x, y), cell_color1);
-                cambiar = true;
-            }
+        case DIFFICULTY_SLOW:
+            state->time_step = DEFAULT_TIMESTEP;
+            break;
+        case DIFFICULTY_NORMAL:
+            state->time_step = DEFAULT_NORMAL_TIMESTEP;
+            break;
+        case DIFFICULTY_FAST:
+            state->time_step = DEFAULT_FAST_TIMESTEP;
+            break;
+        case DIFFICULTY_PROGRESSIVE:
+            state->time_step = DEFAULT_TIMESTEP;
+            break;
+        default:
+            state->time_step = DEFAULT_NORMAL_TIMESTEP;
+            break;
+    }
 
-            indexCount += 6;
-            vertexCount += 4;
+    state->direction_buffer[0] = DIR_NONE;
+    state->direction_buffer[1] = DIR_NONE;
+
+    for (int32_t i = 0; i < MAX_SNAKE_LENGTH; i++) {
+        state->snake[i].position = (v2){0, 0};
+        state->snake[i].direction = (v2){0, 0};
+    }
+
+    // Add Snake
+    state->tail_counter = INITIAL_TAIL_COUNTER;
+    state->snake[0].position = (v2){state->columns / 3 - 1, state->rows / 2 - 1};
+    state->snake[0].direction = (v2){ 1, 0 };
+
+    for (int32_t i = 1; i < state->tail_counter; i++) {
+        state->snake[i].position.x = state->snake[i - 1].position.x - 1;
+        state->snake[i].position.y = state->snake[i - 1].position.y;
+        state->snake[i].direction = (v2){ 1, 0 };
+    }
+
+    // Add Food
+    state->food_pos.x = state->columns / 3 * 2;
+    state->food_pos.y = state->snake[0].position.y;
+    state->food_active = true;
+}
+
+void update_game (Game_state *state, float elapsed_time) {
+
+    state->time += elapsed_time;
+
+    // Actualizacion de estado del juego
+
+    if (state->time > state->time_step && state->status == PLAY)
+    {
+        update_snake(state);
+        state->time = 0;
+    }
+
+    // TODO: Manejar el caso en el que el mapa este totalmente ocupado por la serpiente y
+    // no quede espacio libre para colocar la comida, por ahora probablemente crash...o ciclo infinito
+    // Food position calculation
+    if (!state->food_active)
+    {
+        state->food_active = true;
+
+        state->food_pos.x = rand() % state->columns;
+        state->food_pos.y = rand() % state->rows;
+
+        for (int i = 0; i < state->tail_counter; i++)
+        {
+            while ((state->food_pos.x == state->snake[i].position.x) && (state->food_pos.y == state->snake[i].position.y))
+            {
+                state->food_pos.x = rand() % state->columns;
+                state->food_pos.y = rand() % state->rows;
+                    
+                i = 0;
+
+                SDL_LogDebug(CATEGORY_GAME_SNAKE, "snake: x = %d - y = %d", state->snake[i].position.x, state->snake[i].position.y);
+                SDL_LogDebug(CATEGORY_GAME_SNAKE, "food:  x = %d - y = %d", state->food_pos.x, state->food_pos.y);
+            }
         }
     }
 
+    if (state->status == LOST)
+    {
+
+        if (state->game_over)
+        {
+            if (state->audio_enabled)   Mix_PlayChannel(CH_GAME_OVER, sounds[SND_SNAKE_DIE], 0);
+            state->game_over = false;
+            state->show_status_screen = false;
+            state->time = 0;
+        }
+
+        // Delay after lose, temporal implementation...
+        if (state->time > state->time_out && !state->time_out_completed)
+        {
+            state->show_status_screen = true;
+            state->time_out_completed = true;
+        }
+    }
+}
+
+
+// TODO: Optimizar
+void update_snake(Game_state *state)
+{
+    // if the snake collides with his own body the head will be rotated,
+    // so we restore the old direction
+    v2 old_dir = state->snake[0].direction;
+
+    switch(get_input(state))
+    {
+        case DIR_UP:
+        {
+            state->snake[0].direction = (v2){0, -1};
+        } break;
+
+        case DIR_DOWN:
+        {
+            state->snake[0].direction = (v2){0, 1};
+        } break;
+
+        case DIR_RIGHT:
+        {
+            state->snake[0].direction = (v2){1, 0};
+        } break;
+
+        case DIR_LEFT:
+        {
+            state->snake[0].direction = (v2){-1, 0};
+        } break;
+
+        case DIR_NONE:
+        default:
+        {
+
+        } break;
+    }
+
+    v2 future_pos = {state->snake[0].position.x + state->snake[0].direction.x, state->snake[0].position.y + state->snake[0].direction.y};
+
+
+    // Food Collision
+    if ((future_pos.x == state->food_pos.x && future_pos.y == state->food_pos.y))
+    {
+        state->tail_counter += 1;
+        state->score += 1;
+        state->food_active = false;
+
+        // TODO: Mejorar!!!
+        int32_t* highest_score = &state->levels[state->selected_level].hight_score_by_difficulty[state->difficulty];
+        if (state->score > *highest_score) *highest_score = state->score;
+
+        if (state->audio_enabled) Mix_PlayChannel(CH_EAT, sounds[SND_SNAKE_EAT], 0);
+
+        // Aumento de velocidad
+        if (state->difficulty == DIFFICULTY_PROGRESSIVE)
+        {
+            if (state->score >= 5 && state->score <= 10) state->time_step -= 0.002f;
+            else if (state->score > 10) state->time_step -= 0.001f;
+        }
+    }
+
+    // Head with Body Collision
+    for (int i = 1; i < state->tail_counter; i++)
+    {
+        if (future_pos.x == state->snake[i].position.x && future_pos.y == state->snake[i].position.y
+                && i != state->tail_counter - 1)
+        {
+                state->status = LOST;
+                state->accept_input = false;
+                state->game_over = true;
+                state->snake[0].direction = old_dir;
+                return;
+        }
+    }
+
+    // Head with map limits collisions
+    if (future_pos.x >= 0 && future_pos.x <= state->columns - 1 && future_pos.y >= 0 && future_pos.y <= state->rows - 1)
+    {
+        for (int i = state->tail_counter - 1; i > 0; i--) {
+
+            // TODO: en el caso de la cola lee memoria anterior
+            state->snake[i].position = state->snake[i - 1].position;
+            state->snake[i].direction = state->snake[i - 1].direction;
+        }
+
+        state->snake[0].position.x += state->snake[0].direction.x;
+        state->snake[0].position.y += state->snake[0].direction.y;
+
+    } else {
+        state->status = LOST;
+        state->accept_input = false;
+        state->game_over = true;
+        state->snake[0].direction = old_dir;
+        return;
+    }
+}
+
+void render_game(Renderer *renderer, Game_state *state)
+{
+    // Init the main batch
+    begin_batch(&renderer->main_batch);
+
+    // add operations to the batch
+
+    // Draw the score bar background
+    create_quad(&renderer->main_batch, state->score_rect, NO_TEXTURE, glm::vec4(0.07f, 0.09f, 0.07f, 1.0f));
+
+    // Draw the map
+    for (int32_t y = 0; y < state->rows; y++)
+    {
+        for (int32_t x = 0; x < state->columns; x++)
+        {
+            Quad map_quad = (Quad) {x * state->cell_size + state->screen_rect.x, y * state->cell_size + state->screen_rect.y, state->cell_size, state->cell_size};
+
+            if (state->game_skin == SKIN_DEFAULT)
+            {
+                if (y % 2 == 0)
+                {
+                    if (x % 2 == 0) {
+                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color2);
+                    } else {
+                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color1);
+                    }
+                } else {
+                    if (x % 2 == 0) {
+                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color1);
+                    } else {
+                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color2);
+                    }
+                }
+            }
+            else if (state->game_skin == SKIN_RARE)
+            {
+                if (y % 2 == 0)
+                {
+                    if (x % 2 == 0) {
+                        create_quad(&renderer->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    } else {
+                    	create_quad(&renderer->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    }
+                } else {
+                    if (x % 2 == 0) {
+                    	create_quad(&renderer->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    } else {
+                    	create_quad(&renderer->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    }
+                }
+            }
+            else if (state->game_skin == SKIN_MINIMAL)
+            {
+            	create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            }
+            else if (state->game_skin == SKIN_RETRO)
+            {
+                create_quad(&renderer->main_batch, map_quad, RETRO_CELL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            }
+#if 0
+            else if (state->game_skin == SKIN_CLASSIC)
+            {
+            	create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, glm::vec4(0.77f, 0.81f, 0.64f, 1.0f));
+            }
+#endif
+        }
+    }
 
     // Draw the Snake
-    for (int i = 0; i < tail_counter; i++) {
+    for (int32_t i = 0; i < state->tail_counter; i++)
+    {
+        Quad snake_quad = (Quad) {state->snake[i].position.x * state->cell_size + state->screen_rect.x, state->snake[i].position.y * state->cell_size + state->screen_rect.y, state->cell_size, state->cell_size};
+        SPRITE_ID sprite = NO_TEXTURE;
 
-        if (snake[i].sprite != NO_TEXTURE) {
-           buffer = create_texture_quad(buffer, snake[i].position.x, snake[i].position.y, snake[i].sprite);
+            if (state->game_skin == SKIN_MINIMAL)
+            {
+                if (i != 0) create_quad(&renderer->main_batch, snake_quad, NO_TEXTURE, glm::vec4(0.9f, 0.9f, 0.9f, 1.0f));
+                else create_quad(&renderer->main_batch, snake_quad, NO_TEXTURE, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-            indexCount += 6;
-            vertexCount += 4;
-        }
+            }
+#if 0
+            else if (state->game_skin == SKIN_CLASSIC)
+            {
+                create_quad(&renderer->main_batch, snake_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+            }
+#endif
+            else if (state->game_skin == SKIN_RETRO)
+            {
+                create_quad(&renderer->main_batch, snake_quad, RETRO_BODY, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            }
+            else
+            {
+                // Cabeza
+                if (i == 0)
+                {
+                    if (state->snake[i].direction.x == 1 && state->snake[i].direction.y == 0)
+                    {
+                        sprite = state->game_skin == SKIN_DEFAULT ? HEAD_RIGHT : RARE_HEAD_RIGHT;
+                    }
 
+                    if (state->snake[i].direction.x == -1 && state->snake[i].direction.y == 0)
+                    {
+                        sprite = state->game_skin == SKIN_DEFAULT ? HEAD_LEFT : RARE_HEAD_LEFT;
+                    }
+
+                    if (state->snake[i].direction.x == 0 && state->snake[i].direction.y == 1)
+                    {
+                        sprite = state->game_skin == SKIN_DEFAULT ? HEAD_DOWN : RARE_HEAD_DOWN;
+                    }
+
+                    if (state->snake[i].direction.x == 0 && state->snake[i].direction.y == -1)
+                    {
+                        sprite = state->game_skin == SKIN_DEFAULT ? HEAD_UP : RARE_HEAD_UP;
+                    }
+                }
+                else
+                {
+                    // Cola
+                    if (i == state->tail_counter - 1)
+                    {
+
+                        if (state->snake[i].direction.x == 0 && state->snake[i].direction.y == -1)
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? TAIL_DOWN : RARE_TAIL_DOWN;
+                        }
+
+                        if (state->snake[i].direction.x == 0 && state->snake[i].direction.y == 1)
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? TAIL_UP : RARE_TAIL_UP;
+                        }
+
+                        if (state->snake[i].direction.x == 1 && state->snake[i].direction.y == 0)
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? TAIL_LEFT : RARE_TAIL_LEFT;
+                        }
+
+                        if (state->snake[i].direction.x == -1 && state->snake[i].direction.y == 0)
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? TAIL_RIGHT : RARE_TAIL_RIGHT;
+                        }
+                    }
+                    else  // Cuerpo
+                    {
+                        if (state->snake[i].direction.x == 0 && (state->snake[i].direction.y == -1 || state->snake[i].direction.y == 1))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_VERTICAL : RARE_BODY_VERTICAL;
+                        }
+
+                        if (state->snake[i].direction.y == 0 && (state->snake[i].direction.x == -1 || state->snake[i].direction.x == 1))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_HORIZONTAL : RARE_BODY_HORIZONTAL;
+                        }
+
+                        if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == 1) && (state->snake[i + 1].direction.x == 1 && state->snake[i + 1].direction.y == 0))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMLEFT : RARE_BODY_BOTTOMLEFT;
+                        }
+
+                        if ((state->snake[i].direction.x == 1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == 1))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPRIGHT : RARE_BODY_TOPRIGHT;
+                        }
+
+                        if ((state->snake[i].direction.x == -1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == 1))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPLEFT : RARE_BODY_TOPLEFT;
+                        }
+
+                        if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == -1) && (state->snake[i + 1].direction.x == 1 && state->snake[i + 1].direction.y == 0))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPLEFT : RARE_BODY_TOPLEFT;
+                        }
+
+                        if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == -1) && (state->snake[i + 1].direction.x == -1 && state->snake[i + 1].direction.y == 0))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPRIGHT : RARE_BODY_TOPRIGHT;
+                        }
+
+                        if ((state->snake[i].direction.x == 1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == -1))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMRIGHT : RARE_BODY_BOTTOMRIGHT;
+                        }
+
+                        if ((state->snake[i].direction.x == -1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == -1))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMLEFT : RARE_BODY_BOTTOMLEFT;
+                        }
+
+                        if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == 1) && (state->snake[i + 1].direction.x == -1 && state->snake[i + 1].direction.y == 0))
+                        {
+                            sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMRIGHT : RARE_BODY_BOTTOMRIGHT;
+                        }
+
+                    }
+                }
+
+                create_quad(&renderer->main_batch, snake_quad, sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            }
     }
 
 
-    // Draw the Food
-    buffer = create_texture_quad(buffer, food_pos.x, food_pos.y, APPLE);
-    indexCount += 6;
-    vertexCount += 4;
+     // Draw the Food
+    Quad food_quad = (Quad) {state->food_pos.x * state->cell_size + state->screen_rect.x, state->food_pos.y * state->cell_size + state->screen_rect.y, state->cell_size, state->cell_size};
+    if (state->game_skin == SKIN_DEFAULT)
+    {
+        create_quad(&renderer->main_batch, food_quad, APPLE, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+    }
+    else if (state->game_skin == SKIN_RARE)
+    {
+        create_quad(&renderer->main_batch, food_quad, FRUIT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    }
+    else if (state->game_skin == SKIN_MINIMAL)
+    {
+        create_quad(&renderer->main_batch, food_quad, NO_TEXTURE, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    }
+#if 0
+    else if (state->game_skin == SKIN_CLASSIC)
+    {
+        create_quad(&renderer->main_batch, food_quad, NO_TEXTURE, glm::vec4(0.60f, 0.60f, 0.60f, 1.0f));
+
+        Quad food_center_quad = (Quad){(int32_t)(food_quad.x + food_quad.width * 0.10f), (int32_t)(food_quad.y + food_quad.height * 0.10f), (int32_t)(food_quad.width * 0.8f), (int32_t)(food_quad.height * 0.8f)};
+        create_quad(&renderer->main_batch, food_center_quad, NO_TEXTURE, glm::vec4(0.87f, 0.87f, 0.87f, 1.0f));
+
+    }
+#endif
+    else if (state->game_skin == SKIN_RETRO)
+    {
+        create_quad(&renderer->main_batch, food_quad, RETRO_FOOD, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    }
+
+    draw_touch_controls(state, renderer);
 
     
     // Set dynamic vertex buffer
-    glBindBuffer(GL_ARRAY_BUFFER, state->renderer.vertex_buffer);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, vertexCount * sizeof(Vertex), vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->main_batch.vertex_buffer);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, renderer->main_batch.vertex_count * sizeof(Vertex), renderer->main_batch.vertices);
     
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state->renderer.index_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->main_batch.index_buffer);
     
-    glUseProgram(state->renderer.shaders[TEXTURE_SHADER]);
-    glBindTexture(GL_TEXTURE_2D, state->renderer.textures[0]);
+    glUseProgram(renderer->shaders[TEXTURE_SHADER]);
 
-    init_main_shader_attribs(&state->renderer);
+    glBindTexture(GL_TEXTURE_2D, renderer->textures[0]);
 
+    init_main_shader_attribs(renderer);
 
-    //  Because multiplying matrices occurs from right to left,
-    // we transform the matrix in reverse order: translate, rotate, and then scale.
-    glm::mat4 model = glm::mat4(1.0f);
+    // Copy the projection matrix to the GPU
+    glUniformMatrix4fv(renderer->AttribLocationProjMtx, 1, GL_FALSE, &renderer->camera.projection[0][0]);
 
-    if (state->expandir) {
-        // Target Aspect Ratio
-        float TAR = 17.0f / 15.0f;
-
-        float aspectWidth = DISP_WIDTH - SCORE_BAR_SIZE;
-        float aspectHeight = aspectWidth / TAR;
-
-        if (aspectHeight + SCORE_BAR_SIZE * 2 > DISP_HEIGHT) {
-            // We must switch to pillarbox mode (barras a los lados)
-            aspectHeight = DISP_HEIGHT - SCORE_BAR_SIZE * 2;
-
-            aspectWidth = aspectHeight * TAR;
-        }
-
-        float viewportX = (DISP_WIDTH / 2.0f) - (aspectWidth / 2.0f);
-        float viewportY = (DISP_HEIGHT / 2.0f) - (aspectHeight / 2.0f);
-
-        state->arena = glm::vec4(viewportX, viewportY, aspectWidth, aspectHeight);
-    
-    } else {
-
-        state->arena = glm::vec4((DISP_WIDTH / 2) - (SQUARE_X * SQUARE_SIZE / 2), (DISP_HEIGHT / 2) - ((SQUARE_Y * SQUARE_SIZE) / 2), SQUARE_SIZE * SQUARE_X, SQUARE_SIZE * SQUARE_Y);
+    // TODO: Esto no deberia ser asi...
+    if (state->game_skin == SKIN_RETRO)
+    {
+        glClearColor(0.35f, 0.37f, 0.26f, 1.0f);
+    }
+    else if (state->game_skin == SKIN_MINIMAL)
+    {
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    }
+    else
+    {
+        glClearColor(renderer->clear_color.r, renderer->clear_color.g, renderer->clear_color.b, renderer->clear_color.a);
     }
 
-    model = glm::translate(model, glm::vec3(state->arena.x, state->arena.y, 0.0f));
-    model = glm::scale(model, glm::vec3(state->arena.z / SQUARE_X, state->arena.w / SQUARE_Y, 0.0f));  
-
-    glm::mat4 mvp = state->camara.projection * state->camara.view * model;
-    
-    
-    GLint MVPUniformLoc = glGetUniformLocation(state->renderer.shaders[TEXTURE_SHADER], "u_MVP");
-    if (MVPUniformLoc < 0) {
-        SDL_Log("ERROR: No se pudo obtener la ubicacion de MVP\n");
-    }
-    
-    glUniformMatrix4fv(MVPUniformLoc, 1, GL_FALSE, &mvp[0][0]);
-
-    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClearColor(clear_color.r, clear_color.g, clear_color.b, clear_color.a);
     glClear(GL_COLOR_BUFFER_BIT);
-
 
     print_gles_errors();
     
     // NOTA: OpenGL ES 2.0 solo soporta indices de tipo SHORT, 3.0 soporta int.
-    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_SHORT, NULL);
+    glDrawElements(GL_TRIANGLES, renderer->main_batch.index_count, GL_UNSIGNED_SHORT, NULL);
 
     print_gles_errors();
 
-// es mala idea resetear el estado innecesariamente
-#if 1
+
+// TODO: It's not necessary to reset the state every frame
+#if 0
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1008,293 +969,127 @@ void game_render(Game_state *state)
 
 }
 
-
-#if ACTIVATE_IMGUI
-
-// ImGuiCond_FirstUseEver = if window has not data in .ini file
-// ImGuiCond_Once = once per session
-
-void draw_score(Game_state *state) {
-
-    //ImGuiIO& io = ImGui::GetIO();
-    AtlasSprite sprite = DescAtlas[APPLE];
-
-    ImGui::SetNextWindowPos(ImVec2(state->arena.x, state->arena.y - SCORE_BAR_SIZE));
-    ImGui::SetNextWindowSize(ImVec2(state->arena.z, SCORE_BAR_SIZE));
-
-    // ImGuiWindowFlags_NoBackground
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoInputs;
-    ImGui::SetNextWindowBgAlpha(0.4f); // Transparent background
-    ImGui::Begin("Score", NULL, window_flags);
-
-    ImGui::PushFont(mainFont);
-
-    //ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
-    ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize("100").x) / 2.f);
-
-
-    // TODO: Tiene que haber una forma menos estupida...
-    int scale_factor = 1;
-
-    #if defined(__ANDROID__)
-    scale_factor = 2;
-    #endif
-
-
-    ImGui::Image((void*)(intptr_t)state->renderer.textures[0], 
-        ImVec2(sprite.sourceWidth * scale_factor, sprite.sourceHeight * scale_factor), 
-        ImVec2(((sprite.positionX) / (float)ATLAS_WIDTH), ((sprite.positionY) / (float)ATLAS_HEIGHT)), 
-        ImVec2(((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH), ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT)));
-    
-    ImGui::SameLine();
-    ImVec2 pos = ImGui::GetCursorPos();
-    ImGui::SetCursorPosY(pos.y + (sprite.sourceHeight * scale_factor - MAIN_FONT_SIZE) / 2);
-    ImGui::Text("%d", state->score);
-    //ImGui::PopStyleColor();
-
-    ImGui::PopFont();
-
-    ImGui::End();
-}
-
-void draw_status(Game_state *state) {
-
-    ImGuiIO& io = ImGui::GetIO();
-
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2((int)io.DisplaySize.x, (int)io.DisplaySize.y));
-
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoInputs;
-    ImGui::SetNextWindowBgAlpha(0.6f); // Transparent background
-    
-    ImGui::Begin("Status", NULL, window_flags);
-
-    ImGui::PushFont(largeFont);
-    
-    if (state->status == PAUSED) {
-        ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize("Pausa").x) / 2.f);
-        ImGui::SetCursorPosY( (ImGui::GetWindowHeight() - ImGui::CalcTextSize("Pausa").y) / 2.f);
-        ImGui::Text("Pausa");
-    }
-             
-    if (state->status == LOST) {
-        ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize("Perdiste!").x) / 2.f);
-        ImGui::SetCursorPosY( (ImGui::GetWindowHeight() - ImGui::CalcTextSize("Perdiste!").y) / 2.f);
-        ImGui::Text("Perdiste!");
-    }
-
-    ImGui::PopFont();
-
-    ImGui::End();
-}
-
-void draw_debug_window(Game_state *state)
+DIRECTION direction_vector_enum(v2 dir)
 {
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    
-    //ImGui::SetNextWindowBgAlpha(0.80f); // Transparent background
-    ImGui::Begin("Estado del juego", &show_debug_overlay, window_flags);
+    if (dir.x == 0 && dir.y == -1)  return DIR_UP;
+    if (dir.x == 0 && dir.y == 1)   return DIR_DOWN;
+    if (dir.x == -1 && dir.y == 0)  return DIR_LEFT;
+    if (dir.x == 1 && dir.y == 0)   return DIR_RIGHT;
+    return DIR_NONE;
+}
 
-    ImGui::Text("Estado:");
-    ImGui::SameLine(0, 20);
+v2 direction_enum_vector(DIRECTION dir)
+{
+    if (dir == DIR_UP)  return (v2){0, -1};
+    if (dir == DIR_DOWN) return (v2){0, 1};
+    if (dir == DIR_LEFT) return (v2){-1, 0};
+    if (dir == DIR_RIGHT) return (v2){1, 0};
+    if (dir == DIR_NONE) return (v2){0, 0};
 
+    return (v2){0, 0};
+}
 
-    if (state->status == PLAY)  ImGui::TextColored(ImVec4(0, 255, 0, 1), "PLAY");
-    if (state->status == PAUSED) ImGui::TextColored(ImVec4(255, 0, 255, 1), "PAUSED");
-    if (state->status == LOST)  ImGui::TextColored(ImVec4(255, 0, 0, 1), "LOST");
+// TODO: Implementar esto bien...
+void add_input(Game_state* state, DIRECTION dir)
+{
+    DIRECTION last_dir = DIR_NONE;
 
-    //if (item_disabled)
-    //    ImGui::BeginDisabled(true);
-    //
-    //if (item_disabled)
-    //        ImGui::EndDisabled();
+    // TODO: @test iluminar los botones que se presionan
+    if (state->accept_input) state->input_dir = dir;
 
-    ImGui::SameLine(0, 40);
-    if (ImGui::Button("PLAY", ImVec2(50, 20))) {
-        if (state->status == LOST) {
-            init_game(state);
-            update_snake(snake, state);
-        }
-
-        state->status = PLAY;
-    }
-    ImGui::SameLine();
-
-    if (ImGui::Button("PAUSE", ImVec2(50, 20))) {
-        state->status = PAUSED;
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("LOST", ImVec2(50, 20))) {
-        state->status = LOST;
-    }
-
-    ImGui::Separator();
-
-    ImGui::SliderFloat("Time Step", &state->time_step, 0.1f, 1.0f);
-
-    ImGui::Checkbox("Audio", &state->audio_enabled);
-
-    ImGui::SameLine();
-    ImGui::Checkbox("Expandir", &state->expandir);
-    
-    //ImGui::SameLine();
-    //ImGui::Checkbox("Colision cuerpo", &audio_enabled);
-    //ImGui::SameLine();
-    //ImGui::Checkbox("Colision paredes", &audio_enabled);
-    //ImGui::SameLine();
-    //ImGui::Checkbox("Wrap", &audio_enabled);
-
-
-
-    ImGui::Separator();
-
-    ImGui::InputInt("Score", &state->score, 1);
-
-    ImGui::Separator();
-
-    ImGui::InputInt("Food x", &food_pos.x);
-    ImGui::InputInt("Food y", &food_pos.y);
-    if (food_pos.x > SQUARE_X - 1) food_pos.x = SQUARE_X - 1;
-    if (food_pos.x < 0) food_pos.x = 0;
-    if (food_pos.y > SQUARE_Y - 1) food_pos.y = SQUARE_Y - 1;
-    if (food_pos.y < 0) food_pos.y = 0;
-
-    ImGui::Separator();
-
-    static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_RowBg;
-
-    if (ImGui::BeginTable("body_table", 5, flags))
+    if (state->direction_buffer[0] == DIR_NONE && state->direction_buffer[1] == DIR_NONE)
     {
-        // Submit columns name with TableSetupColumn() and call TableHeadersRow() to create a row with a header in each column.
-        ImGui::TableSetupColumn("ID");
-        ImGui::TableSetupColumn("Type");
-        ImGui::TableSetupColumn("Position");
-        ImGui::TableSetupColumn("Direction");
-        ImGui::TableSetupColumn("Sprite");
-        ImGui::TableHeadersRow();
+        last_dir = direction_vector_enum(state->snake[0].direction);
+    }
+    else {
+        last_dir = state->direction_buffer[1];
+    }
 
-        for (int row = 0; row < tail_counter; row++)
+    if (state->accept_input && dir != last_dir && (state->direction_buffer[0] == DIR_NONE || state->direction_buffer[1] == DIR_NONE))
+    {
+        v2 last_dir_opposite = direction_enum_vector(last_dir);
+        v2 new_dir = direction_enum_vector(dir);
+
+        if (new_dir.x != -last_dir_opposite.x && new_dir.y != -last_dir_opposite.y)
         {
-            ImGui::TableNextRow();
-            for (int column = 0; column < 5; column++)
+            if (state->direction_buffer[1] == DIR_NONE)
             {
-                ImGui::TableSetColumnIndex(column);
-                //ImGui::Text("Hello %d,%d", column, row);
-
-                switch(column) {
-                    case 0:
-                    {
-                        ImGui::Text("%d", row);
-                    } break;
-
-                    case 1:
-                    {
-                        if (row == 0)   ImGui::Text("HEAD");
-                        else if (row == tail_counter - 1) ImGui::Text("TAIL");
-                        else ImGui::Text("BODY");
-
-                    } break;
-
-                    case 2:
-                    {
-                        ImGui::Text("(%d, %d)", snake[row].position.x, snake[row].position.y);
-                    } break;
-
-                    case 3:
-                    {
-                        ImGui::Text("(%d, %d)", snake[row].direction.x, snake[row].direction.y);
-                    } break;
-
-                    case 4:
-                    {
-                       char const *sprite_names[ATLAS_SPRITE_COUNT + 1] =  {
-                            "NO_TEXTURE",
-                            "APPLE",
-                            "TAIL_RIGHT",
-                            "TAIL_UP",
-                            "TAIL_DOWN",
-                            "TAIL_LEFT",
-                            "BODY_BOTTOMLEFT",
-                            "BODY_BOTTOMRIGHT",
-                            "BODY_HORIZONTAL",
-                            "BODY_TOPLEFT",
-                            "BODY_TOPRIGHT",
-                            "BODY_VERTICAL",
-                            "HEAD_DOWN",
-                            "HEAD_LEFT",
-                            "HEAD_RIGHT",
-                            "HEAD_UP",
-                            "ATLAS_SPRITE_COUNT"
-                        };
-
-                        ImGui::Text("%s", sprite_names[snake[row].sprite]);
-                    } break;
-                }
+                state->direction_buffer[1] = dir;
             }
-         }
-
-        ImGui::EndTable();
-    }
-
-
-    ImGui::End();
-}
-
-void draw_debug_overlay()
-{
-    const float DISTANCE = 10.0f;
-    static int corner = 3;
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    if (corner != -1)
-    {
-        window_flags |= ImGuiWindowFlags_NoMove;
-        ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE);
-        ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
-        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-    }
-
-    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-    if (ImGui::Begin("Renderer Debug overlay", &show_debug_overlay, window_flags))
-    {
-        ImGui::Text("Renderer Debug Overlay");
-        ImGui::Separator();
-
-
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
-        if (ImGui::IsMousePosValid())
-            ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
-        else
-            ImGui::Text("Mouse Position: <invalid>");
-
-        ImGui::Text("Windows Size: (%d, %d)", DISP_WIDTH, DISP_HEIGHT);
-        ImGui::Text("Viewport Pos: (x = %d, y = %d) \nViewport Size: (w = %d, h = %d)", state.arena.x, state.arena.y, state.arena.w, state.arena.z);
-
-
-        ImGui::Separator();
-
-        ImGui::ColorEdit3("Background##2f", &clear_color[0], ImGuiColorEditFlags_Float);
-        ImGui::ColorEdit3("Cells 1##2f", &cell_color1[0], ImGuiColorEditFlags_Float);
-        ImGui::ColorEdit3("Cells 2##2f", &cell_color2[0], ImGuiColorEditFlags_Float);
-
-        if (ImGui::BeginPopupContextWindow())
-        {
-            if (ImGui::MenuItem("Custom", NULL, corner == -1)) corner = -1;
-            if (ImGui::MenuItem("Top-left", NULL, corner == 0)) corner = 0;
-            if (ImGui::MenuItem("Top-right", NULL, corner == 1)) corner = 1;
-            if (ImGui::MenuItem("Bottom-left", NULL, corner == 2)) corner = 2;
-            if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
-            if (show_debug_overlay && ImGui::MenuItem("Close")) show_debug_overlay = false;
-            ImGui::EndPopup();
+            else {
+                state->direction_buffer[0] = state->direction_buffer[1];
+                state->direction_buffer[1] = dir;
+            }
         }
-     }
-     ImGui::End();
+    }
 }
 
+// TODO: Codigo bastante feo
+DIRECTION get_input(Game_state* state)
+{
+    DIRECTION dir = DIR_NONE;
 
+    if (state->direction_buffer[0] != DIR_NONE && state->direction_buffer[1] != DIR_NONE)
+    {
+        dir = state->direction_buffer[0];
+        state->direction_buffer[0] = state->direction_buffer[1];
+        state->direction_buffer[1] = DIR_NONE;
+
+        return dir;
+    }
+
+    if (state->direction_buffer[0] == DIR_NONE && state->direction_buffer[1] != DIR_NONE)
+    {
+        dir = state->direction_buffer[1];
+        state->direction_buffer[1] = DIR_NONE;
+
+        return dir;
+    }
+
+    if (state->direction_buffer[0] != DIR_NONE && state->direction_buffer[1] == DIR_NONE)
+    {
+        dir = state->direction_buffer[0];
+        state->direction_buffer[0] = DIR_NONE;
+
+        return dir;
+    }
+
+    return dir;
+}
+
+bool is_over(Rect rect, int32_t x, int32_t y)
+{
+    bool over = true;
+
+    // Posicion del punto con respecto al rectangulo
+    if (x < rect.x ||                // el mouse esta a la izquierda
+        x > rect.x + rect.width ||      // a la derecha
+        y < rect.y ||                // arriba
+        y > rect.y + rect.height)        // abajo
+        over = false;
+
+    // Si no esta en ninguna de esas posiciones, solo puede estar sobre el boton.
+    return over;
+}
+
+int log_init(Game_state *state)
+{
+	// Set the log priority to show debug logs, change later only for errors?
+#if defined(NDEBUG)
+    SDL_LogSetPriority(CATEGORY_GAME_SNAKE, SDL_LOG_PRIORITY_DEBUG);
+    SDL_LogSetPriority(CATEGORY_ENGINE_SNAKE, SDL_LOG_PRIORITY_DEBUG);
+#else
+	SDL_LogSetPriority(CATEGORY_GAME_SNAKE, SDL_LOG_PRIORITY_ERROR);
+	SDL_LogSetPriority(CATEGORY_ENGINE_SNAKE, SDL_LOG_PRIORITY_ERROR);
 #endif
 
+    return 1;
+}
 
+// TODO: Uses the global state and renderer @Fix
+void shutdown_game(Renderer *renderer)
+{
+	shutdown_renderer(renderer);
+	Mix_CloseAudio();
+    return;
+}

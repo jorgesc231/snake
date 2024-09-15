@@ -9,15 +9,6 @@ Ejemplo de como desarrollar un juego usando **OpenGL ES 2** para multiples plata
 **Se puede probar aqui:** <https://jorgesc231.github.io/snake/>
 
 
-### Controles
-
-- **Espacio** -> Iniciar
-- **Escape** -> Pausa
-- **Flechas de direccion o WASD** -> Controlar la serpiente
-- **F1** -> Abrir/Cerrar menu de depuración
-- **F5** -> Cierra el juego
-
-
 ## Compilar
 
 ### Windows
@@ -31,13 +22,13 @@ Instalar:
 
 *Las dependencias estan en el repositorio del proyecto.*
 
-Desde la terminal de *msys2* ir a la carpeta win32_build del proyecto y ejecutar el script:
+Desde la terminal de *msys2* ir a la carpeta del proyecto y ejecutar el script:
 
 ```
 build_win32.bat
 ```
 
-Esto generará el ejecutable del juego llamado: **snake_win32.exe**.
+Esto generará el ejecutable del juego en la carpeta *build_win32* y copiara los assets.
 
 *Depende de los dlls que estan en la carpeta para ejecutarse.*
 
@@ -47,47 +38,13 @@ Esto generará el ejecutable del juego llamado: **snake_win32.exe**.
 
 (Por hacer...)
 
-Deberia funciona lo mismo que la Raspberry Pi...
 
 ### Android
 
 (Por hacer...)
 
-*Hay un .apk en releases.*
-
 
 ### WebAssembly
-
-##### en Windows
-
-Instalar el SDK de Emscripten:
-
-[https://emscripten.org/]()
-
-y seguir el tutorial de instalación.
-
-Abrir la terminal de Windows en la carpeta donde se descargo **emsdk** y ejecutar el siguiente archivo:
-
-```
-emsdk_env.bat
-```
-
-Para colocar el compilador el path.
-
-Ir a la carpeta **web_build** que esta en el repositorio y ejecutar:
-
-
-```
-build_web.bat
-```
-
-Se puede ejecutar de forma local con el comando:
-
-
-```
-emrun index.html
-```
-
 
 ##### en Linux
 
@@ -104,42 +61,36 @@ emsdk_env.sh
 
 Para colocar el compilador el path.
 
-Ir a la carpeta **web_build** que esta en el repositorio y ejecutar:
+Ir al directorio del repositorio y ejecutar:
 
 
 ```
 build_web.sh
 ```
 
-Se puede ejecutar de forma local con el comando:
+El resultado estara en *build_web*.
 
+También se puede descomentar la linea de compilación de debug para poder ejecutar de forma local con el comando:
 
 ```
 emrun index.html
 ```
 
+
 ### Raspberry Pi
 
-**Para la Raspberry Pi 1 B+, en las versiones mas nuevas deberia funcionar con el SDL2 que viene en los repositorios.**
-
-Seguir el tutorial para compilar SDL2 para Raspberry Pi: 
+**En la Raspberry Pi 1 B+ el SDL2 que esta en los repositorios no funciona hay que compilar SDL2 desde el codigo fuente usando el siguiente tutorial:**
 
 [https://github.com/jorgesc231/tutoriales_raspberry_pi/tree/master/sdl2_gles2_rpi1]()
 
 *Comprobar que el ejemplo con OpenGL ES funcione correctamente.*
 
-Una vez completado, en la misma terminal ir a la carpeta **src/** del repositorio del juego y ejecutar:
+**En las versiones más nuevas deberia funcionar con el SDL2 de los repositorios.**
+
+Una vez instaladas las bibliotecas SDL2, en la terminal ir al directorio del repositorio y ejecutar:
 
 ```
 build_rpi1.bat
 ```
 
-Deberia generar el binario para la Raspberry Pi, traspasarlo junto al directorio de los assets usando **scp** y ejecutarlo.
-
-
-## TODO
-
-- Ordenar el codigo
-- Corregir el bloqueo de FPS en Windows
-- Mejora en el procesamiento de entrada
-- Optimizacion
+Deberia generar el binario para la Raspberry Pi y copiar los assets en el directorio *build_rpi*, traspasar todo el contenido del directorio usando **scp** y ejecutarlo.
