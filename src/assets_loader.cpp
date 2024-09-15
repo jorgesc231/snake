@@ -351,15 +351,15 @@ void init_levels (Game_state *state)
 
             case LEVEL_PHONE:
             {
-                state->levels[LEVEL_PHONE].rows = 28;
+                state->levels[LEVEL_PHONE].rows = 26;
                 state->levels[LEVEL_PHONE].columns = 14;
             } break;
 
             default:
             case LEVEL_DEFAULT:
             {
-                state->levels[LEVEL_DEFAULT].rows = DEFAULT_ROWS_COUNT;
-                state->levels[LEVEL_DEFAULT].columns = DEFAULT_COLUMNS_COUNT;
+                state->levels[LEVEL_DEFAULT].rows = 15;
+                state->levels[LEVEL_DEFAULT].columns = 17;
             } break;
         }
 

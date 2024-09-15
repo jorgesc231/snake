@@ -33,8 +33,6 @@
 #define CONFIG_FILE_NAME "config.txt"
 
 #define MAX_SNAKE_LENGTH 1024
-#define DEFAULT_COLUMNS_COUNT 17
-#define DEFAULT_ROWS_COUNT 15
 #define DEFAULT_CELL_SIZE 48
 #define INITIAL_TAIL_COUNTER 3
 
@@ -180,7 +178,7 @@ struct Game_state {
     int32_t tail_counter = 0;
 
     int32_t cell_size = DEFAULT_CELL_SIZE;
-    int32_t rows = DEFAULT_ROWS_COUNT, columns = DEFAULT_COLUMNS_COUNT;
+    int32_t rows, columns;
 
     v2 food_pos = {10, 7};
     int32_t food_active = false;
