@@ -39,12 +39,10 @@ jobs:
       # Gives executions permissions to the build script
       - name: executions permissions to the build script
         run: chmod 700 ./build_web.sh
-        working-directory: ./build_web
 
       # Runs the build script
       - name: Run the build script
         run: ./build_web.sh
-        working-directory: ./build_web
         
       # commit the game files to github pages branch
       - name: Commit the game files to the github pages branch
@@ -70,7 +68,8 @@ jobs:
         install: git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-7zip
     
     - name: Run the build script
-      run: build_win32.bat
+      shell: cmd
+      run: msys2 -c build_win32.bat
     
     - name: Rename build directory
       run: mv build_win32 Snake_win32
