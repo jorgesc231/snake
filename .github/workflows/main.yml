@@ -69,7 +69,7 @@ jobs:
     
     - name: Run the build script
       shell: cmd
-      run: msys2 -c build_win32.bat
+      run: build_win32.bat
     
     - name: Rename build directory
       run: mv build_win32 Snake_win32
