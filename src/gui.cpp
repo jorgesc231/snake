@@ -514,15 +514,18 @@ void draw_status(Renderer *renderer, Game_state *state) {
         // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().
         // During the frame, use ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values,
         // and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
-#if defined(__ANDROID__)
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(60, 60));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 50));
-#else
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(30, 20));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 10));
-#endif
+        if (renderer->device_type == PHONE)
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(60, 60));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 50));
+        }
+        else
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(30, 20));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 10));
+        }
 
         ImVec2 text_button_size = ImGui::CalcTextSize(get_text(state->selected_language, STR_BTN_PLAY));
         ImVec2 frame_padding = ImGui::GetStyle().FramePadding;
@@ -603,46 +606,52 @@ void draw_status(Renderer *renderer, Game_state *state) {
     {
         state->accept_input = false;
 
+        ImVec2 options_window_size;
+
         // TODO: Deberia buscar otra forma...
-#if defined(__ANDROID__)
-        ImVec2 options_window_size = ImVec2(ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
+        if (renderer->device_type == PHONE)
+        {
+            options_window_size = ImVec2(ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
 
-        ImGui::SetNextWindowBgAlpha(0.4f);
-        ImGui::SetNextWindowPos(ImVec2(ImGui::GetWindowWidth() * 0.5f, ImGui::GetWindowHeight() * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowBgAlpha(0.4f);
+            ImGui::SetNextWindowPos(ImVec2(ImGui::GetWindowWidth() * 0.5f, ImGui::GetWindowHeight() * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 
-        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 80.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 10.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 80.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 10.0f);
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(40, 40));
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(40, 40));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 40));
-#else
-        ImVec2 options_window_size = ImVec2(ImGui::GetWindowWidth() * 0.70f, ImGui::GetWindowHeight() * 0.80f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(40, 40));
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(40, 40));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 40));
+        }
+        else
+        {
+            options_window_size = ImVec2(ImGui::GetWindowWidth() * 0.70f, ImGui::GetWindowHeight() * 0.80f);
 
-        ImGui::SetNextWindowBgAlpha(0.4f);
-        // set next window position. call before Begin(). use pivot=(0.5f,0.5f) to center on given point, etc.
-        ImGui::SetNextWindowPos(ImVec2(ImGui::GetWindowWidth() / 2.0f, ImGui::GetWindowHeight() / 2.0f), ImGuiCond_Always, ImVec2(0.5f, 0.46f));
+            ImGui::SetNextWindowBgAlpha(0.4f);
+            // set next window position. call before Begin(). use pivot=(0.5f,0.5f) to center on given point, etc.
+            ImGui::SetNextWindowPos(ImVec2(ImGui::GetWindowWidth() / 2.0f, ImGui::GetWindowHeight() / 2.0f), ImGuiCond_Always, ImVec2(0.5f, 0.46f));
 
-        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 40.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 10.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 40.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 10.0f);
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(40, 40));
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20, 20));
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 40));
-#endif
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(40, 40));
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20, 20));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 40));
+        }
 
         // ImGuiWindowFlags_AlwaysVerticalScrollbar
         ImGui::BeginChild("Options", options_window_size, ImGuiChildFlags_Border, ImGuiWindowFlags_NoSavedSettings);
 
-#if defined(__ANDROID__)
-        ImGui::Spacing();
-        ImGui::Spacing();
-        ImGui::Spacing();
-#endif
+        if (renderer->device_type == PHONE)
+        {
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+        }
 
         float spacing = ImGui::GetStyle().ItemInnerSpacing.x + 20;
 
@@ -691,9 +700,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
 
             state->game_skin = (GAME_SKIN)current_item;
 
-			#if defined(__ANDROID__)
-            ImGui::Spacing();
-			#endif
+			if (renderer->device_type == PHONE) ImGui::Spacing();
         }
 
         ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_LEVEL));
@@ -742,9 +749,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
                 calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
             }
 
-            #if defined(__ANDROID__)
-            ImGui::Spacing();
-			#endif
+            if (renderer->device_type == PHONE) ImGui::Spacing();
         }
 
         ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_VELOCITY));
@@ -800,9 +805,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
             else if (_item == DIFFICULTY_FAST) state->time_step = DEFAULT_FAST_TIMESTEP;
             else if (_item == DIFFICULTY_PROGRESSIVE) state->time_step = DEFAULT_NORMAL_TIMESTEP;
 
-#if defined(__ANDROID__)
-            ImGui::Spacing();
-#endif
+            if (renderer->device_type == PHONE) ImGui::Spacing();
         }
 
 
