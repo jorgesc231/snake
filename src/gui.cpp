@@ -22,7 +22,8 @@ void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_heigh
     int32_t aspectWidth = state->screen_rect.width;
     int32_t aspectHeight = aspectWidth / target_aspect_ratio;
 
-    if (aspectHeight > state->screen_rect.height) {
+    if (aspectHeight > state->screen_rect.height)
+    {
         // We must switch to pillarbox mode (barras a los lados)
         aspectHeight = state->screen_rect.height;
         aspectWidth = aspectHeight * target_aspect_ratio;
@@ -37,6 +38,14 @@ void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_heigh
     // Center the score bar and the map
     cut_left(&state->screen_rect, diff * 0.5f);
     cut_right(&state->screen_rect, diff * 0.5f);
+
+    // Limit the minimum size of the score bar
+    if (diff > screen_width * 0.5f)
+    {
+    	if (screen_width > screen_height) diff = screen_width * 0.5f;
+    	else diff = 0;
+    }
+
     cut_left(&state->score_rect, diff * 0.5f);
     cut_right(&state->score_rect, diff * 0.5f);
 }
