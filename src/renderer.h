@@ -15,17 +15,16 @@
 #include "assets_loader.h"
 #include <imgui.h>
 
-#if defined(__ANDROID__)
-#define MAIN_FONT_SIZE 64.0f
-#define LARGE_FONT_SIZE 84.0f
-#define TITLE_FONT_SIZE 196.0f
-#define SCORE_BAR_SIZE 148.0f
-#else
-#define MAIN_FONT_SIZE 28.0f
-#define LARGE_FONT_SIZE 32.0f
-#define TITLE_FONT_SIZE 144.0f
-#define SCORE_BAR_SIZE 60.0f
-#endif
+#define PHONE_MAIN_FONT_SIZE 64.0f
+#define PHONE_LARGE_FONT_SIZE 84.0f
+#define PHONE_TITLE_FONT_SIZE 196.0f
+#define PHONE_SCORE_BAR_SIZE 148.0f
+
+#define PC_MAIN_FONT_SIZE 28.0f
+#define PC_LARGE_FONT_SIZE 32.0f
+#define PC_TITLE_FONT_SIZE 144.0f
+#define PC_SCORE_BAR_SIZE 60.0f
+
 
 // NOTE: To debug IMGUI OPENGL
 //#define IMGUI_IMPL_OPENGL_DEBUG
@@ -122,6 +121,9 @@ struct Renderer {
     ImFont* font_main = NULL;
     ImFont* font_large = NULL;
     ImFont* font_title = NULL;
+    float font_main_size;
+    float font_large_size;
+    float font_title_size;
     
     glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
     glm::vec4 cell_color1 = DEFAULT_CELL_COLOR1;

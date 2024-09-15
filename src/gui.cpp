@@ -15,7 +15,7 @@ void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_heigh
 {
     state->screen_rect = (Rect) {0, 0, screen_width, screen_height};
 
-    state->score_rect = cut_top(&state->screen_rect, SCORE_BAR_SIZE);
+    state->score_rect = cut_top(&state->screen_rect, state->score_bar_size);
 
     float target_aspect_ratio = state->columns / (float)state->rows;
 
@@ -1333,7 +1333,7 @@ void draw_pad_triangles (Game_state *state, Batch *batch, glm::vec4 color, glm::
     //int32_t icon_size = v3.y - v1.y;
     // TODO: @Hack
 #if defined(__ANDROID__)
-    int32_t icon_size = 64 * 2;
+    int32_t icon_size = 128;
 #else
     int32_t icon_size = 64;
 #endif

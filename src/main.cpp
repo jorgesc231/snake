@@ -88,11 +88,23 @@ int32_t init_game(Renderer *renderer, Game_state *state)
     {
         state->controller_type = CONTROLLER_TOUCH;
         state->selected_level = LEVEL_PHONE;
+        state->score_bar_size = PHONE_SCORE_BAR_SIZE;
+
+        renderer->scale_factor = 2;
+        renderer->font_large_size = PHONE_LARGE_FONT_SIZE;
+        renderer->font_main_size = PHONE_MAIN_FONT_SIZE;
+        renderer->font_title_size = PHONE_TITLE_FONT_SIZE;
     }
     else
     {
         state->controller_type = CONTROLLER_KEYBOARD;
         state->selected_level = LEVEL_DEFAULT;
+        state->score_bar_size = PC_SCORE_BAR_SIZE;
+
+        renderer->scale_factor = 1;
+        renderer->font_large_size = PC_LARGE_FONT_SIZE;
+        renderer->font_main_size = PC_MAIN_FONT_SIZE;
+        renderer->font_title_size = PC_TITLE_FONT_SIZE;
     }
 
     init_levels (state);
@@ -198,9 +210,11 @@ int32_t init_game(Renderer *renderer, Game_state *state)
     renderer->font_debug = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, &font_cfg);
     IM_ASSERT(renderer->font_debug != NULL);
 #endif
-    renderer->font_main = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, MAIN_FONT_SIZE, &font_cfg);
-    renderer->font_large = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, LARGE_FONT_SIZE, &font_cfg);
-    renderer->font_title = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, TITLE_FONT_SIZE, &font_cfg);
+
+    renderer->font_main = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, renderer->font_main_size, &font_cfg);
+    renderer->font_large = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, renderer->font_large_size, &font_cfg);
+    renderer->font_title = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, renderer->font_title_size, &font_cfg);
+
 
     IM_ASSERT(renderer->font_main != NULL);
     IM_ASSERT(renderer->font_large != NULL);
