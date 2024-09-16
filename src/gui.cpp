@@ -45,6 +45,7 @@ void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_heigh
     	if (screen_width > screen_height) diff = screen_width * 0.5f;
     	else diff = 0;
     }
+    else if (screen_width < screen_height) diff = 0;
 
     cut_left(&state->score_rect, diff * 0.5f);
     cut_right(&state->score_rect, diff * 0.5f);
@@ -523,7 +524,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
         // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().
         // During the frame, use ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values,
         // and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
-        if (renderer->device_type == PHONE)
+        if (renderer->device_type == PHONE && renderer->DISP_HEIGHT > renderer->DISP_WIDTH)
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(60, 60));
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
@@ -655,7 +656,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
         // ImGuiWindowFlags_AlwaysVerticalScrollbar
         ImGui::BeginChild("Options", options_window_size, ImGuiChildFlags_Border, ImGuiWindowFlags_NoSavedSettings);
 
-        if (renderer->device_type == PHONE)
+        if (renderer->device_type == PHONE && renderer->DISP_HEIGHT > renderer->DISP_WIDTH)
         {
             ImGui::Spacing();
             ImGui::Spacing();
