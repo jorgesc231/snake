@@ -9,6 +9,7 @@ IF NOT EXIST %BUILD_DIR%\assets\sound MD %BUILD_DIR%\assets\sound
 COPY assets\graphics %BUILD_DIR%\assets\graphics
 COPY assets\shaders %BUILD_DIR%\assets\shaders
 COPY assets\sound %BUILD_DIR%\assets\sound
+COPY assets\favicon.ico %BUILD_DIR%
 
 PUSHD %BUILD_DIR%
 
