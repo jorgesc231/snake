@@ -769,13 +769,27 @@ void render_game(Renderer *renderer, Game_state *state)
             {
                 create_quad(&renderer->main_batch, map_quad, RETRO_CELL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             }
-#if 0
             else if (state->game_skin == SKIN_CLASSIC)
             {
-            	create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, glm::vec4(0.77f, 0.81f, 0.64f, 1.0f));
+            	create_quad(&renderer->main_batch, map_quad, CLASSIC_BODY, glm::vec4(0.25f, 0.25f, 0.25f, 0.1f));
             }
-#endif
         }
+    }
+
+    // Draw the border for the classic skin
+    if (state->game_skin == SKIN_CLASSIC)
+    {
+    	int32_t border_size = state->border_size;
+    	int32_t border_height = state->cell_size * state->rows;
+
+    	Quad border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y, border_size, border_height + border_size};
+    	create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+
+    	border_quad = (Quad) {state->screen_rect.x + state->screen_rect.width, state->screen_rect.y, border_size, border_height + border_size};
+    	create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+
+    	border_quad = (Quad) {state->screen_rect.x, state->screen_rect.y + border_height, state->screen_rect.width, border_size};
+    	create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
     }
 
     // Draw the Snake
@@ -790,12 +804,11 @@ void render_game(Renderer *renderer, Game_state *state)
                 else create_quad(&renderer->main_batch, snake_quad, NO_TEXTURE, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
             }
-#if 0
             else if (state->game_skin == SKIN_CLASSIC)
             {
-                create_quad(&renderer->main_batch, snake_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+            	if (i != 0) create_quad(&renderer->main_batch, snake_quad, CLASSIC_BODY, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+            	else create_quad(&renderer->main_batch, snake_quad, CLASSIC_HEAD, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
             }
-#endif
             else if (state->game_skin == SKIN_RETRO)
             {
                 create_quad(&renderer->main_batch, snake_quad, RETRO_BODY, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -926,16 +939,10 @@ void render_game(Renderer *renderer, Game_state *state)
     {
         create_quad(&renderer->main_batch, food_quad, NO_TEXTURE, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
     }
-#if 0
     else if (state->game_skin == SKIN_CLASSIC)
     {
-        create_quad(&renderer->main_batch, food_quad, NO_TEXTURE, glm::vec4(0.60f, 0.60f, 0.60f, 1.0f));
-
-        Quad food_center_quad = (Quad){(int32_t)(food_quad.x + food_quad.width * 0.10f), (int32_t)(food_quad.y + food_quad.height * 0.10f), (int32_t)(food_quad.width * 0.8f), (int32_t)(food_quad.height * 0.8f)};
-        create_quad(&renderer->main_batch, food_center_quad, NO_TEXTURE, glm::vec4(0.87f, 0.87f, 0.87f, 1.0f));
-
+        create_quad(&renderer->main_batch, food_quad, CLASSIC_FOOD, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
     }
-#endif
     else if (state->game_skin == SKIN_RETRO)
     {
         create_quad(&renderer->main_batch, food_quad, RETRO_FOOD, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -967,6 +974,10 @@ void render_game(Renderer *renderer, Game_state *state)
     else if (state->game_skin == SKIN_MINIMAL)
     {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    }
+    else if (state->game_skin == SKIN_CLASSIC)
+    {
+        glClearColor(0.7f, 0.74f, 0.03f, 1.0f);
     }
     else
     {
@@ -1111,7 +1122,6 @@ int log_init(Game_state *state)
     return 1;
 }
 
-// TODO: Uses the global state and renderer @Fix
 void shutdown_game(Renderer *renderer)
 {
 	shutdown_renderer(renderer);

@@ -79,7 +79,7 @@ enum GAME_LEVEL {
 enum GAME_SKIN {
     SKIN_DEFAULT,
     SKIN_RETRO,
-    //SKIN_CLASSIC,
+    SKIN_CLASSIC,
     SKIN_MINIMAL,
     SKIN_RARE,
 
@@ -185,6 +185,7 @@ struct Game_state {
 
     Rect screen_rect, score_rect;
     int32_t score_bar_size = PC_SCORE_BAR_SIZE;
+    int32_t border_size = 0;
 
     int32_t score = 0;
     

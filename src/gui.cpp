@@ -17,27 +17,45 @@ void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_heigh
 
     state->score_rect = cut_top(&state->screen_rect, state->score_bar_size);
 
-    float target_aspect_ratio = state->columns / (float)state->rows;
+    // TODO: Should be a better way!
+    // Create the border for the CLASSIC SKIN, but i could use this to implement
+    // borders for the others skins...
+    state->border_size = state->screen_rect.height * 0.01f;
 
-    int32_t aspectWidth = state->screen_rect.width;
-    int32_t aspectHeight = aspectWidth / target_aspect_ratio;
-
-    if (aspectHeight > state->screen_rect.height)
+    if (state->game_skin == SKIN_CLASSIC)
     {
-        // We must switch to pillarbox mode (barras a los lados)
-        aspectHeight = state->screen_rect.height;
-        aspectWidth = aspectHeight * target_aspect_ratio;
+    	cut_bottom(&state->screen_rect, state->border_size);
+    	cut_right(&state->screen_rect, state->border_size);
+    	cut_left(&state->screen_rect, state->border_size);
     }
 
-    state->cell_size = aspectHeight / state->rows;
+    float target_aspect_ratio = state->columns / (float)state->rows;
+
+    int32_t aspect_width = state->screen_rect.width;
+    int32_t aspect_height = aspect_width / target_aspect_ratio;
+
+    if (aspect_height > state->screen_rect.height)
+    {
+        // We must switch to pillarbox mode (barras a los lados)
+    	aspect_height = state->screen_rect.height;
+    	aspect_width = aspect_height * target_aspect_ratio;
+    }
+
+    state->cell_size = aspect_height / state->rows;
 
     create_touch_controls(state);
 
     int32_t diff =  screen_width - state->cell_size * state->columns;
 
-    // Center the score bar and the map
+    // TODO: Temporal!!
+    if (state->game_skin == SKIN_CLASSIC) diff -= state->border_size * 2;
+
+    // Center the map
     cut_left(&state->screen_rect, diff * 0.5f);
     cut_right(&state->screen_rect, diff * 0.5f);
+
+    // TODO: Temporal!!
+    if (state->game_skin == SKIN_CLASSIC) diff -= state->border_size;
 
     // Limit the minimum size of the score bar
     if (diff > screen_width * 0.5f)
@@ -47,6 +65,7 @@ void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_heigh
     }
     else if (screen_width < screen_height) diff = 0;
 
+    // Center the score bar
     cut_left(&state->score_rect, diff * 0.5f);
     cut_right(&state->score_rect, diff * 0.5f);
 }
@@ -670,7 +689,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
             const char* item_names[] = {
             		get_text(state->selected_language, STR_SKIN_DEFAULT),
 					get_text(state->selected_language, STR_SKIN_RETRO),
-					//get_text(state->selected_language, STR_SKIN_CLASSIC),
+					get_text(state->selected_language, STR_SKIN_CLASSIC),
 					get_text(state->selected_language, STR_SKIN_MINIMAL),
 					get_text(state->selected_language, STR_SKIN_RARE),
 					get_text(state->selected_language, STR_SKIN_3D),
@@ -688,9 +707,10 @@ void draw_status(Renderer *renderer, Game_state *state) {
 
             if (ImGui::ArrowButton("##left_arrow_skin", ImGuiDir_Left))
             {
-                current_item--;
+                if (--current_item < 0) current_item = GAME_SKIN_COUNT - 1;
 
-                if (current_item < 0) current_item = GAME_SKIN_COUNT - 1;
+                state->game_skin = (GAME_SKIN)current_item;
+                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
             }
 
             ImGui::SameLine();
@@ -703,12 +723,11 @@ void draw_status(Renderer *renderer, Game_state *state) {
 
             if (ImGui::ArrowButton("##right_arrow_skin", ImGuiDir_Right))
             {
-                current_item++;
+                if (++current_item >= GAME_SKIN_COUNT) current_item = 0;
 
-                if (current_item >= GAME_SKIN_COUNT) current_item = 0;
+                state->game_skin = (GAME_SKIN)current_item;
+                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
             }
-
-            state->game_skin = (GAME_SKIN)current_item;
 
 			if (renderer->device_type == PHONE) ImGui::Spacing();
         }
