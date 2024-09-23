@@ -98,6 +98,9 @@ uint32_t init_renderer(Renderer *renderer)
         return EXIT_FAILURE;
     }
 
+    // Get the provided window size
+    SDL_GetWindowSize(renderer->window, &renderer->DISP_WIDTH, &renderer->DISP_HEIGHT);
+
     // Create OpenGL context
     renderer->context = SDL_GL_CreateContext(renderer->window);
     
