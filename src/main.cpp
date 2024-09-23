@@ -779,17 +779,20 @@ void render_game(Renderer *renderer, Game_state *state)
     // Draw the border for the classic skin
     if (state->game_skin == SKIN_CLASSIC)
     {
-    	int32_t border_size = state->border_size;
-    	int32_t border_height = state->cell_size * state->rows;
+        int32_t border_size = state->border_size;
+        int32_t border_height = state->cell_size * state->rows;
 
-    	Quad border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y, border_size, border_height + border_size};
-    	create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+        // Left Border
+        Quad border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y, border_size, border_height + border_size};
+        create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
 
-    	border_quad = (Quad) {state->screen_rect.x + state->screen_rect.width, state->screen_rect.y, border_size, border_height + border_size};
-    	create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+        // Right Border
+        border_quad = (Quad) {state->screen_rect.x + state->screen_rect.width, state->screen_rect.y, border_size, border_height + border_size};
+        create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
 
-    	border_quad = (Quad) {state->screen_rect.x, state->screen_rect.y + border_height, state->screen_rect.width, border_size};
-    	create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+        // Bottom Border
+        border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y + border_height, state->screen_rect.width + border_size, border_size};
+        create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
     }
 
     // Draw the Snake
