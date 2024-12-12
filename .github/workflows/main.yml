@@ -62,7 +62,7 @@ jobs:
     
     - name: Run the build script
       shell: cmd
-      run: build_win32.bat
+      run: build_win32.bat release
     
     - name: Rename build directory
       run: mv build_win32 Snake_win32
