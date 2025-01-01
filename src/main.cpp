@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <assert.h>
 
+#include <SDL2/SDL_opengles2.h>
+
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
 
@@ -15,27 +17,21 @@
 #include "translate.h"
 
 #include "snake.h"
-#include "assets_loader.h"
-#include "renderer.h"
+#include "engine.h"
 #include "gui.h"
 
-Mix_Chunk* sounds[SND_MAX];
-
-Renderer renderer;
-AssetManager assets;
+// Emscripten necesita una funcion especial para pasarle parametros al main loop
+Engine engine;
 Game_state state;
-
-uint64_t prev_time = SDL_GetTicks64();
 
 int main(int argc, char* args[])
 {
 	log_init(&state);
 
-    init_renderer(&renderer);
-    init_asset_manager(&assets);
+    init_engine(&engine);
 
     // TODO: Implement a better way of manage errors
-    state.quit = !init_game(&renderer, &state);
+    state.quit = !init_game(&engine, &state);
 
 #if !defined(__EMSCRIPTEN__)
 
@@ -44,7 +40,7 @@ int main(int argc, char* args[])
         main_loop();
     }
     
-    shutdown_game(&renderer);
+    shutdown_game(&engine);
 #endif
 
 
@@ -61,49 +57,49 @@ void main_loop()
 {    
     // The code calculates the elapsedTime in seconds since the last time this code was executed.
     uint64_t current_time = SDL_GetTicks64();
-    float elapsed_time = (float)(current_time - prev_time) / 1000.0f;
-    prev_time = current_time;  // Prepare for the next frame
+    float elapsed_time = (float)(current_time - engine.prev_time) / 1000.0f;
+    engine.prev_time = current_time;  // Prepare for the next frame
 
     // Process Events
-    process_events(&renderer, &state);
+    process_events(&engine, &state);
 
     update_game(&state, elapsed_time);
 
-    render_game(&renderer, &state);
+    render_game(&engine, &state);
         
     print_gles_errors();
 
-    draw_gui(&renderer, &state);
+    draw_gui(&engine, &state);
 
-    SDL_GL_SwapWindow(renderer.window);
+    SDL_GL_SwapWindow(engine.window);
 
     //SDL_LogDebug(CATEGORY_GAME_SNAKE, "Current FPS: %f", 1.0f / elapsed_time);
 }
 
-int32_t init_game(Renderer *renderer, Game_state *state)
+int32_t init_game(Engine *engine, Game_state *state)
 {
 	get_system_language(state);
 
-    if (renderer->device_type == PHONE)
+    if (engine->device_type == PHONE)
     {
         state->controller_type = CONTROLLER_TOUCH;
         state->selected_level = LEVEL_PHONE;
 
-        if (renderer->DISP_WIDTH > renderer->DISP_HEIGHT)
+        if (engine->DISP_WIDTH > engine->DISP_HEIGHT)
         {
             state->score_bar_size = PC_SCORE_BAR_SIZE;
-            renderer->scale_factor = 1;
-            renderer->font_large_size = PC_LARGE_FONT_SIZE;
-            renderer->font_main_size = PC_MAIN_FONT_SIZE;
-            renderer->font_title_size = PC_TITLE_FONT_SIZE;
+            engine->scale_factor = 1;
+            engine->font_large_size = PC_LARGE_FONT_SIZE;
+            engine->font_main_size = PC_MAIN_FONT_SIZE;
+            engine->font_title_size = PC_TITLE_FONT_SIZE;
         }
         else
         {
             state->score_bar_size = PHONE_SCORE_BAR_SIZE;
-            renderer->scale_factor = 2;
-            renderer->font_large_size = PHONE_LARGE_FONT_SIZE;
-            renderer->font_main_size = PHONE_MAIN_FONT_SIZE;
-            renderer->font_title_size = PHONE_TITLE_FONT_SIZE;
+            engine->scale_factor = 2;
+            engine->font_large_size = PHONE_LARGE_FONT_SIZE;
+            engine->font_main_size = PHONE_MAIN_FONT_SIZE;
+            engine->font_title_size = PHONE_TITLE_FONT_SIZE;
         }
     }
     else
@@ -112,61 +108,61 @@ int32_t init_game(Renderer *renderer, Game_state *state)
         state->selected_level = LEVEL_DEFAULT;
 
         state->score_bar_size = PC_SCORE_BAR_SIZE;
-        renderer->scale_factor = 1;
-        renderer->font_large_size = PC_LARGE_FONT_SIZE;
-        renderer->font_main_size = PC_MAIN_FONT_SIZE;
-        renderer->font_title_size = PC_TITLE_FONT_SIZE;
+        engine->scale_factor = 1;
+        engine->font_large_size = PC_LARGE_FONT_SIZE;
+        engine->font_main_size = PC_MAIN_FONT_SIZE;
+        engine->font_title_size = PC_TITLE_FONT_SIZE;
     }
 
     init_levels (state);
 
     // TODO: solucion temporal...
 #if !defined(__EMSCRIPTEN__)
-    load_state_file(&assets, CONFIG_FILE_NAME, state);
+    load_state_file(engine, CONFIG_FILE_NAME, state);
 #endif
 
     change_level(state, state->selected_level);
 
-    calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+    calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
 
     print_gles_errors();
 
     // Load Texture and Shaders
-    renderer->textures[0] = texture_load(&assets, "graphics/atlas.png");
+    engine->textures[0] = texture_load(&engine->assets, "graphics/atlas.png");
 
     print_gles_errors();
 
-    renderer->shaders[TEXTURE_SHADER] = shader_prog_load(&assets, "shaders/texture.vertex", "shaders/texture.fragment");
+    engine->shaders[TEXTURE_SHADER] = shader_prog_load(&engine->assets, "shaders/texture.vertex", "shaders/texture.fragment");
 
     print_gles_errors();
 
     // TODO: No se ejecutan estos asserts a pesar de estar definido NDEBUG...
 #if defined(NDEBUG)
-    assert(renderer->textures[0]);
-    assert(renderer->shaders[TEXTURE_SHADER]);
+    assert(engine->textures[0]);
+    assert(engine->shaders[TEXTURE_SHADER]);
 #endif
 
-    if (!renderer->textures[0] || !renderer->shaders[TEXTURE_SHADER])
+    if (!engine->textures[0] || !engine->shaders[TEXTURE_SHADER])
     {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't load game assets.", NULL);
         return 0;
     }
 
-    glUseProgram(renderer->shaders[TEXTURE_SHADER]);
+    glUseProgram(engine->shaders[TEXTURE_SHADER]);
 
-    init_main_shader_attribs(renderer);
+    init_main_shader_attribs(engine);
 
     // Get the uniform location
-    renderer->AttribLocationProjMtx = glGetUniformLocation(renderer->shaders[TEXTURE_SHADER], "u_Projection");
-    if (renderer->AttribLocationProjMtx < 0)
+    engine->AttribLocationProjMtx = glGetUniformLocation(engine->shaders[TEXTURE_SHADER], "u_Projection");
+    if (engine->AttribLocationProjMtx < 0)
     {
         SDL_LogError(CATEGORY_GAME_SNAKE, "ERROR: Couldn't get \"MVP\" uniform location\n");
         assert(0);
     }
 
-    glBindTexture(GL_TEXTURE_2D, renderer->textures[0]);
+    glBindTexture(GL_TEXTURE_2D, engine->textures[0]);
     
-    GLint tex_sampler_uniform_loc = glGetUniformLocation(renderer->shaders[TEXTURE_SHADER], "texSampler");
+    GLint tex_sampler_uniform_loc = glGetUniformLocation(engine->shaders[TEXTURE_SHADER], "texSampler");
     if (tex_sampler_uniform_loc < 0)
     {
         SDL_LogError(CATEGORY_GAME_SNAKE, "ERROR: Couldn't get \"texSampler\" uniform location\n");
@@ -177,14 +173,14 @@ int32_t init_game(Renderer *renderer, Game_state *state)
     glUniform1i(tex_sampler_uniform_loc, 0);
     
     // Inicializa el audio
-    if (init_audio(sounds, SND_MAX))
+    if (init_audio(state->sounds, SND_MAX))
     {
         // TODO: Reportar errores si no se puede cargar el audio...
-        sounds[SND_SNAKE_EAT] = Mix_LoadWAV(get_data_path(&assets, "sound/food.mp3"));
-        sounds[SND_INTERACTION] = Mix_LoadWAV(get_data_path(&assets, "sound/move.mp3"));
-        sounds[SND_SNAKE_DIE] = Mix_LoadWAV(get_data_path(&assets, "sound/gameover_short.mp3"));
+        state->sounds[SND_SNAKE_EAT] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/food.mp3"));
+        state->sounds[SND_INTERACTION] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/move.mp3"));
+        state->sounds[SND_SNAKE_DIE] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/gameover_short.mp3"));
 
-        state->audio_loaded = sounds[SND_SNAKE_EAT] && sounds[SND_INTERACTION] && sounds[SND_SNAKE_DIE];
+        state->audio_loaded = state->sounds[SND_SNAKE_EAT] && state->sounds[SND_INTERACTION] && state->sounds[SND_SNAKE_DIE];
     }
     else
     {
@@ -201,7 +197,7 @@ int32_t init_game(Renderer *renderer, Game_state *state)
     // IMPORTANT: AddFontFromMemoryTTF() by default transfer ownership of the data buffer to the font atlas, which will attempt to free it on destruction.
     void *font_data = NULL;
     int32_t font_data_size = 0;
-    font_data = load_font(&assets, "graphics/Bungee-Regular.ttf", font_data, &font_data_size);
+    font_data = load_font(&engine->assets, "graphics/Bungee-Regular.ttf", font_data, &font_data_size);
 
     if (!font_data)
     {
@@ -218,18 +214,18 @@ int32_t init_game(Renderer *renderer, Game_state *state)
     ImFontConfig font_cfg;
     font_cfg.FontDataOwnedByAtlas = false;
 #if defined(NDEBUG)
-    renderer->font_debug = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, &font_cfg);
-    IM_ASSERT(renderer->font_debug != NULL);
+    engine->font_debug = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, &font_cfg);
+    IM_ASSERT(engine->font_debug != NULL);
 #endif
 
-    renderer->font_main = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, renderer->font_main_size, &font_cfg);
-    renderer->font_large = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, renderer->font_large_size, &font_cfg);
-    renderer->font_title = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, renderer->font_title_size, &font_cfg);
+    engine->font_main = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, engine->font_main_size, &font_cfg);
+    engine->font_large = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, engine->font_large_size, &font_cfg);
+    engine->font_title = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, engine->font_title_size, &font_cfg);
 
 
-    IM_ASSERT(renderer->font_main != NULL);
-    IM_ASSERT(renderer->font_large != NULL);
-    IM_ASSERT(renderer->font_title != NULL);
+    IM_ASSERT(engine->font_main != NULL);
+    IM_ASSERT(engine->font_large != NULL);
+    IM_ASSERT(engine->font_title != NULL);
     
     set_game_state(state);
     update_snake(state);
@@ -237,7 +233,7 @@ int32_t init_game(Renderer *renderer, Game_state *state)
     return 1;
 }
 
-void process_events(Renderer *renderer, Game_state *state)
+void process_events(Engine *engine, Game_state *state)
 {
     SDL_Event event;
         
@@ -258,7 +254,7 @@ void process_events(Renderer *renderer, Game_state *state)
                 state->accept_input = false;
         	}
 #if !defined(__EMSCRIPTEN__)
-        	write_state_file(&assets, CONFIG_FILE_NAME, state);
+        	write_state_file(engine, CONFIG_FILE_NAME, state);
 #endif
         }
 
@@ -280,7 +276,7 @@ void process_events(Renderer *renderer, Game_state *state)
         if (event.type == SDL_APP_TERMINATING)
         {
 #if !defined(__EMSCRIPTEN__)
-        	write_state_file(&assets, CONFIG_FILE_NAME, state);
+        	write_state_file(engine, CONFIG_FILE_NAME, state);
 #endif
         }
 
@@ -294,16 +290,16 @@ void process_events(Renderer *renderer, Game_state *state)
                 {
                     SDL_LogDebug(CATEGORY_GAME_SNAKE, "Window %d size changed to %dx%d\n", event.window.windowID, event.window.data1, event.window.data2);
 
-                    if (event.window.data1 != renderer->DISP_WIDTH || event.window.data2 != renderer->DISP_HEIGHT)
+                    if (event.window.data1 != engine->DISP_WIDTH || event.window.data2 != engine->DISP_HEIGHT)
                     {
-                        renderer->DISP_WIDTH = event.window.data1;
-                        renderer->DISP_HEIGHT = event.window.data2;
+                        engine->DISP_WIDTH = event.window.data1;
+                        engine->DISP_HEIGHT = event.window.data2;
 
-                        glViewport(0, 0, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                        glViewport(0, 0, engine->DISP_WIDTH, engine->DISP_HEIGHT);
 
-                        init_camera_2d(&renderer->camera, renderer->DISP_WIDTH, renderer->DISP_HEIGHT, glm::vec2(0, 0));
+                        init_camera_2d(&engine->camera, engine->DISP_WIDTH, engine->DISP_HEIGHT, glm::vec2(0, 0));
 
-                        calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                        calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
                     }
                 } break;
 
@@ -342,8 +338,8 @@ void process_events(Renderer *renderer, Game_state *state)
                 // la entrada tactil va de 0.0 a 1.0.
                 if (event.type == SDL_FINGERDOWN)
                 {
-                	x = (int32_t)(event.tfinger.x * renderer->DISP_WIDTH);
-                	y = (int32_t)(event.tfinger.y * renderer->DISP_HEIGHT);
+                	x = (int32_t)(event.tfinger.x * engine->DISP_WIDTH);
+                	y = (int32_t)(event.tfinger.y * engine->DISP_HEIGHT);
                 	SDL_LogDebug(CATEGORY_GAME_SNAKE, "normalized %f x %f \t window %dx%d\n", event.tfinger.x, event.tfinger.y, x, y);
                 }
 
@@ -403,7 +399,7 @@ void process_events(Renderer *renderer, Game_state *state)
             // Pausa con escape
             if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state->status != LOST)
             {
-              	if (state->audio_enabled) Mix_PlayChannel(CH_INTERACTION, sounds[SND_INTERACTION], 0);
+              	if (state->audio_enabled) Mix_PlayChannel(CH_INTERACTION, state->sounds[SND_INTERACTION], 0);
 
                	if (state->status != PAUSED && state->status != INIT)
                	{
@@ -500,7 +496,7 @@ void process_events(Renderer *renderer, Game_state *state)
     if (state->quit)
     {
 #if !defined(__EMSCRIPTEN__)
-    	write_state_file(&assets, CONFIG_FILE_NAME, state);
+    	write_state_file(engine, CONFIG_FILE_NAME, state);
 #endif
     }
 }
@@ -598,7 +594,7 @@ void update_game (Game_state *state, float elapsed_time) {
 
         if (state->game_over)
         {
-            if (state->audio_enabled)   Mix_PlayChannel(CH_GAME_OVER, sounds[SND_SNAKE_DIE], 0);
+            if (state->audio_enabled)   Mix_PlayChannel(CH_GAME_OVER, state->sounds[SND_SNAKE_DIE], 0);
             state->game_over = false;
             state->show_status_screen = false;
             state->time = 0;
@@ -664,7 +660,7 @@ void update_snake(Game_state *state)
         int32_t* highest_score = &state->levels[state->selected_level].hight_score_by_difficulty[state->difficulty];
         if (state->score > *highest_score) *highest_score = state->score;
 
-        if (state->audio_enabled) Mix_PlayChannel(CH_EAT, sounds[SND_SNAKE_EAT], 0);
+        if (state->audio_enabled) Mix_PlayChannel(CH_EAT, state->sounds[SND_SNAKE_EAT], 0);
 
         // Aumento de velocidad
         if (state->difficulty == DIFFICULTY_PROGRESSIVE)
@@ -710,15 +706,15 @@ void update_snake(Game_state *state)
     }
 }
 
-void render_game(Renderer *renderer, Game_state *state)
+void render_game(Engine *engine, Game_state *state)
 {
     // Init the main batch
-    begin_batch(&renderer->main_batch);
+    begin_batch(&engine->main_batch);
 
     // add operations to the batch
 
     // Draw the score bar background
-    create_quad(&renderer->main_batch, state->score_rect, NO_TEXTURE, glm::vec4(0.07f, 0.09f, 0.07f, 1.0f));
+    create_quad(&engine->main_batch, state->score_rect, NO_TEXTURE, glm::vec4(0.07f, 0.09f, 0.07f, 1.0f));
 
     // Draw the map
     for (int32_t y = 0; y < state->rows; y++)
@@ -732,15 +728,15 @@ void render_game(Renderer *renderer, Game_state *state)
                 if (y % 2 == 0)
                 {
                     if (x % 2 == 0) {
-                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color2);
+                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color2);
                     } else {
-                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color1);
+                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color1);
                     }
                 } else {
                     if (x % 2 == 0) {
-                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color1);
+                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color1);
                     } else {
-                        create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, renderer->cell_color2);
+                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color2);
                     }
                 }
             }
@@ -749,29 +745,29 @@ void render_game(Renderer *renderer, Game_state *state)
                 if (y % 2 == 0)
                 {
                     if (x % 2 == 0) {
-                        create_quad(&renderer->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                        create_quad(&engine->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                     } else {
-                    	create_quad(&renderer->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    	create_quad(&engine->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                     }
                 } else {
                     if (x % 2 == 0) {
-                    	create_quad(&renderer->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    	create_quad(&engine->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                     } else {
-                    	create_quad(&renderer->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    	create_quad(&engine->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                     }
                 }
             }
             else if (state->game_skin == SKIN_MINIMAL)
             {
-            	create_quad(&renderer->main_batch, map_quad, NO_TEXTURE, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            	create_quad(&engine->main_batch, map_quad, NO_TEXTURE, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
             }
             else if (state->game_skin == SKIN_RETRO)
             {
-                create_quad(&renderer->main_batch, map_quad, RETRO_CELL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                create_quad(&engine->main_batch, map_quad, RETRO_CELL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             }
             else if (state->game_skin == SKIN_CLASSIC)
             {
-            	create_quad(&renderer->main_batch, map_quad, CLASSIC_BODY, glm::vec4(0.25f, 0.25f, 0.25f, 0.1f));
+            	create_quad(&engine->main_batch, map_quad, CLASSIC_BODY, glm::vec4(0.25f, 0.25f, 0.25f, 0.1f));
             }
         }
     }
@@ -784,15 +780,15 @@ void render_game(Renderer *renderer, Game_state *state)
 
         // Left Border
         Quad border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y, border_size, border_height + border_size};
-        create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+        create_quad(&engine->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
 
         // Right Border
         border_quad = (Quad) {state->screen_rect.x + state->screen_rect.width, state->screen_rect.y, border_size, border_height + border_size};
-        create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+        create_quad(&engine->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
 
         // Bottom Border
         border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y + border_height, state->screen_rect.width + border_size, border_size};
-        create_quad(&renderer->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+        create_quad(&engine->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
     }
 
     // Draw the Snake
@@ -803,18 +799,18 @@ void render_game(Renderer *renderer, Game_state *state)
 
             if (state->game_skin == SKIN_MINIMAL)
             {
-                if (i != 0) create_quad(&renderer->main_batch, snake_quad, NO_TEXTURE, glm::vec4(0.9f, 0.9f, 0.9f, 1.0f));
-                else create_quad(&renderer->main_batch, snake_quad, NO_TEXTURE, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                if (i != 0) create_quad(&engine->main_batch, snake_quad, NO_TEXTURE, glm::vec4(0.9f, 0.9f, 0.9f, 1.0f));
+                else create_quad(&engine->main_batch, snake_quad, NO_TEXTURE, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
             }
             else if (state->game_skin == SKIN_CLASSIC)
             {
-            	if (i != 0) create_quad(&renderer->main_batch, snake_quad, CLASSIC_BODY, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
-            	else create_quad(&renderer->main_batch, snake_quad, CLASSIC_HEAD, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+            	if (i != 0) create_quad(&engine->main_batch, snake_quad, CLASSIC_BODY, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+            	else create_quad(&engine->main_batch, snake_quad, CLASSIC_HEAD, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
             }
             else if (state->game_skin == SKIN_RETRO)
             {
-                create_quad(&renderer->main_batch, snake_quad, RETRO_BODY, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                create_quad(&engine->main_batch, snake_quad, RETRO_BODY, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             }
             else
             {
@@ -922,7 +918,7 @@ void render_game(Renderer *renderer, Game_state *state)
                     }
                 }
 
-                create_quad(&renderer->main_batch, snake_quad, sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                create_quad(&engine->main_batch, snake_quad, sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             }
     }
 
@@ -931,43 +927,43 @@ void render_game(Renderer *renderer, Game_state *state)
     Quad food_quad = (Quad) {state->food_pos.x * state->cell_size + state->screen_rect.x, state->food_pos.y * state->cell_size + state->screen_rect.y, state->cell_size, state->cell_size};
     if (state->game_skin == SKIN_DEFAULT)
     {
-        create_quad(&renderer->main_batch, food_quad, APPLE, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        create_quad(&engine->main_batch, food_quad, APPLE, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     }
     else if (state->game_skin == SKIN_RARE)
     {
-        create_quad(&renderer->main_batch, food_quad, FRUIT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        create_quad(&engine->main_batch, food_quad, FRUIT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
     }
     else if (state->game_skin == SKIN_MINIMAL)
     {
-        create_quad(&renderer->main_batch, food_quad, NO_TEXTURE, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+        create_quad(&engine->main_batch, food_quad, NO_TEXTURE, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
     }
     else if (state->game_skin == SKIN_CLASSIC)
     {
-        create_quad(&renderer->main_batch, food_quad, CLASSIC_FOOD, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+        create_quad(&engine->main_batch, food_quad, CLASSIC_FOOD, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
     }
     else if (state->game_skin == SKIN_RETRO)
     {
-        create_quad(&renderer->main_batch, food_quad, RETRO_FOOD, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        create_quad(&engine->main_batch, food_quad, RETRO_FOOD, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
-    draw_touch_controls(state, renderer);
+    draw_touch_controls(state, engine);
 
     
     // Set dynamic vertex buffer
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->main_batch.vertex_buffer);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, renderer->main_batch.vertex_count * sizeof(Vertex), renderer->main_batch.vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, engine->main_batch.vertex_buffer);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, engine->main_batch.vertex_count * sizeof(Vertex), engine->main_batch.vertices);
     
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->main_batch.index_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, engine->main_batch.index_buffer);
     
-    glUseProgram(renderer->shaders[TEXTURE_SHADER]);
+    glUseProgram(engine->shaders[TEXTURE_SHADER]);
 
-    glBindTexture(GL_TEXTURE_2D, renderer->textures[0]);
+    glBindTexture(GL_TEXTURE_2D, engine->textures[0]);
 
-    init_main_shader_attribs(renderer);
+    init_main_shader_attribs(engine);
 
     // Copy the projection matrix to the GPU
-    glUniformMatrix4fv(renderer->AttribLocationProjMtx, 1, GL_FALSE, &renderer->camera.projection[0][0]);
+    glUniformMatrix4fv(engine->AttribLocationProjMtx, 1, GL_FALSE, &engine->camera.projection[0][0]);
 
     // TODO: Esto no deberia ser asi...
     if (state->game_skin == SKIN_RETRO)
@@ -984,7 +980,7 @@ void render_game(Renderer *renderer, Game_state *state)
     }
     else
     {
-        glClearColor(renderer->clear_color.r, renderer->clear_color.g, renderer->clear_color.b, renderer->clear_color.a);
+        glClearColor(engine->clear_color.r, engine->clear_color.g, engine->clear_color.b, engine->clear_color.a);
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
@@ -992,7 +988,7 @@ void render_game(Renderer *renderer, Game_state *state)
     print_gles_errors();
     
     // NOTA: OpenGL ES 2.0 solo soporta indices de tipo SHORT, 3.0 soporta int.
-    glDrawElements(GL_TRIANGLES, renderer->main_batch.index_count, GL_UNSIGNED_SHORT, NULL);
+    glDrawElements(GL_TRIANGLES, engine->main_batch.index_count, GL_UNSIGNED_SHORT, NULL);
 
     print_gles_errors();
 
@@ -1125,9 +1121,9 @@ int log_init(Game_state *state)
     return 1;
 }
 
-void shutdown_game(Renderer *renderer)
+void shutdown_game(Engine *engine)
 {
-	shutdown_renderer(renderer);
+	shutdown_engine(engine);
 	Mix_CloseAudio();
     return;
 }

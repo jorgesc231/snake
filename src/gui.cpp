@@ -220,7 +220,7 @@ void create_touch_controls(Game_state *state)
 }
 
 // Show touch controls on the screen
-void draw_touch_controls(Game_state *state, Renderer *renderer)
+void draw_touch_controls(Game_state *state, Engine *engine)
 {
     float opacity = 0.25f;
     float opacity_pressed = 0.4f;
@@ -236,7 +236,7 @@ void draw_touch_controls(Game_state *state, Renderer *renderer)
         Rect *right_button = &state->touch_input_rects[TOUCH_INPUT_RIGHT];
 
         // TODO: Hardcoded
-        int arrow_size = 64 * renderer->scale_factor;
+        int arrow_size = 64 * engine->scale_factor;
         Rect tex_rect = *up_button;
         cut_top(&tex_rect, (up_button->height - arrow_size) * 0.5f);
         cut_bottom(&tex_rect, (up_button->height - arrow_size) * 0.5f);
@@ -246,13 +246,13 @@ void draw_touch_controls(Game_state *state, Renderer *renderer)
         // Coloca la textura de las flechas en los botones
         if (state->input_dir == DIR_UP && state->accept_input)
         {
-            create_quad(&renderer->main_batch, *up_button, NO_TEXTURE, color_pressed);
-            create_quad(&renderer->main_batch, tex_rect, UI_UP_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
+            create_quad(&engine->main_batch, *up_button, NO_TEXTURE, color_pressed);
+            create_quad(&engine->main_batch, tex_rect, UI_UP_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
         }
         else
         {
-            create_quad(&renderer->main_batch, *up_button, NO_TEXTURE, color_released);
-            create_quad(&renderer->main_batch, tex_rect, UI_UP_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
+            create_quad(&engine->main_batch, *up_button, NO_TEXTURE, color_released);
+            create_quad(&engine->main_batch, tex_rect, UI_UP_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
         }
 
         tex_rect = *down_button;
@@ -263,13 +263,13 @@ void draw_touch_controls(Game_state *state, Renderer *renderer)
 
         if (state->input_dir == DIR_DOWN && state->accept_input)
         {
-            create_quad(&renderer->main_batch, *down_button, NO_TEXTURE, glm::vec4(0.22f, 0.22f, 0.22f, opacity_pressed));
-            create_quad(&renderer->main_batch, tex_rect, UI_DOWN_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
+            create_quad(&engine->main_batch, *down_button, NO_TEXTURE, glm::vec4(0.22f, 0.22f, 0.22f, opacity_pressed));
+            create_quad(&engine->main_batch, tex_rect, UI_DOWN_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
         }
         else
         {
-            create_quad(&renderer->main_batch, *down_button, NO_TEXTURE, color_released);
-            create_quad(&renderer->main_batch, tex_rect, UI_DOWN_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
+            create_quad(&engine->main_batch, *down_button, NO_TEXTURE, color_released);
+            create_quad(&engine->main_batch, tex_rect, UI_DOWN_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
         }
 
         tex_rect = *left_button;
@@ -280,13 +280,13 @@ void draw_touch_controls(Game_state *state, Renderer *renderer)
 
         if (state->input_dir == DIR_LEFT && state->accept_input)
         {
-            create_quad(&renderer->main_batch, *left_button, NO_TEXTURE, color_pressed);
-            create_quad(&renderer->main_batch, tex_rect, UI_LEFT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
+            create_quad(&engine->main_batch, *left_button, NO_TEXTURE, color_pressed);
+            create_quad(&engine->main_batch, tex_rect, UI_LEFT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
         }
         else
         {
-            create_quad(&renderer->main_batch, *left_button, NO_TEXTURE, color_released);
-            create_quad(&renderer->main_batch, tex_rect, UI_LEFT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
+            create_quad(&engine->main_batch, *left_button, NO_TEXTURE, color_released);
+            create_quad(&engine->main_batch, tex_rect, UI_LEFT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
         }
 
         tex_rect = *right_button;
@@ -297,40 +297,40 @@ void draw_touch_controls(Game_state *state, Renderer *renderer)
 
         if (state->input_dir == DIR_RIGHT && state->accept_input)
         {
-            create_quad(&renderer->main_batch, *right_button, NO_TEXTURE, color_pressed);
-            create_quad(&renderer->main_batch, tex_rect, UI_RIGHT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
+            create_quad(&engine->main_batch, *right_button, NO_TEXTURE, color_pressed);
+            create_quad(&engine->main_batch, tex_rect, UI_RIGHT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity_pressed));
         }
         else
         {
-            create_quad(&renderer->main_batch, *right_button, NO_TEXTURE, color_released);
-            create_quad(&renderer->main_batch, tex_rect, UI_RIGHT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
+            create_quad(&engine->main_batch, *right_button, NO_TEXTURE, color_released);
+            create_quad(&engine->main_batch, tex_rect, UI_RIGHT_ARROW, glm::vec4(1.0f, 1.0f, 1.0f, opacity));
         }
     }
 
     if (state->controller_type == CONTROLLER_TOUCH3)
     {
-        draw_pad_triangles(state, &renderer->main_batch, glm::vec4(0.22f, 0.22f, 0.22f, opacity), glm::vec4(0.22f, 0.22f, 0.22f, opacity_pressed));
+        draw_pad_triangles(state, &engine->main_batch, glm::vec4(0.22f, 0.22f, 0.22f, opacity), glm::vec4(0.22f, 0.22f, 0.22f, opacity_pressed));
     }
 }
 
-void draw_gui(Renderer *renderer, Game_state *state) {
+void draw_gui(Engine *engine, Game_state *state) {
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
 
-    draw_score(renderer, state);
+    draw_score(engine, state);
         
-    if (state->status != PLAY && state->show_status_screen) draw_status(renderer, state);
+    if (state->status != PLAY && state->show_status_screen) draw_status(engine, state);
         
 #if defined(NDEBUG)
     if (state->show_demo_window) ImGui::ShowDemoWindow((bool *)&state->show_demo_window);
 
     if (state->show_debug_overlay)
     {
-        draw_debug_overlay(renderer, state);
-        draw_debug_window(renderer, state);
+        draw_debug_overlay(engine, state);
+        draw_debug_window(engine, state);
     }
 #endif
 
@@ -347,7 +347,7 @@ void draw_gui(Renderer *renderer, Game_state *state) {
     print_gles_errors();
 }
 
-void draw_score(Renderer *renderer, Game_state *state)
+void draw_score(Engine *engine, Game_state *state)
 {
     AtlasSprite apple_sprite = DescAtlas[APPLE];
     AtlasSprite trophy_sprite = DescAtlas[UI_TROPHY];
@@ -355,7 +355,7 @@ void draw_score(Renderer *renderer, Game_state *state)
     AtlasSprite sound_sprite = DescAtlas[UI_AUDIO];
     AtlasSprite mute_sprite = DescAtlas[UI_NO_AUDIO];
 
-    ImGui::PushFont(renderer->font_main);
+    ImGui::PushFont(engine->font_main);
 
     //ImGui::GetTextLineHeight();
     int32_t spacing = 10;
@@ -410,7 +410,7 @@ void draw_score(Renderer *renderer, Game_state *state)
     ImGui::SetCursorScreenPos(ImVec2(highest_point.x, highest_point.y));
 
     // Dibuja el sprite del trofeo a lado del puntaje mas alto
-    ImGui::Image((void*)(intptr_t)renderer->textures[0],
+    ImGui::Image((void*)(intptr_t)engine->textures[0],
         ImVec2(trophy_size, trophy_size),
         ImVec2(((trophy_sprite.positionX) / (float)ATLAS_WIDTH), ((trophy_sprite.positionY) / (float)ATLAS_HEIGHT)),
         ImVec2(((trophy_sprite.positionX + trophy_sprite.sourceWidth) / (float)ATLAS_WIDTH), ((trophy_sprite.positionY + trophy_sprite.sourceHeight) / (float)ATLAS_HEIGHT)));
@@ -422,7 +422,7 @@ void draw_score(Renderer *renderer, Game_state *state)
     ImGui::SetCursorScreenPos(ImVec2(score_rect.x, score_rect.y + score_rect.height * 0.5f - apple_size * 0.5f));
 
     // Dibuja el sprite de la manzada a lado del puntaje
-    ImGui::Image((void*)(intptr_t)renderer->textures[0],
+    ImGui::Image((void*)(intptr_t)engine->textures[0],
                  ImVec2(apple_size, apple_size),
                  ImVec2(((apple_sprite.positionX) / (float)ATLAS_WIDTH), ((apple_sprite.positionY) / (float)ATLAS_HEIGHT)),
                  ImVec2(((apple_sprite.positionX + apple_sprite.sourceWidth) / (float)ATLAS_WIDTH), ((apple_sprite.positionY + apple_sprite.sourceHeight) / (float)ATLAS_HEIGHT)));
@@ -451,7 +451,7 @@ void draw_score(Renderer *renderer, Game_state *state)
 
     if (state->audio_enabled)
     {
-        if (ImGui::ImageButton("Sound", (void*)(intptr_t)renderer->textures[0],
+        if (ImGui::ImageButton("Sound", (void*)(intptr_t)engine->textures[0],
         		ImVec2(buttons.height * 0.9f, buttons.height * 0.9f),
         		ImVec2(((sound_sprite.positionX) / (float)ATLAS_WIDTH), ((sound_sprite.positionY) / (float)ATLAS_HEIGHT)),
     			ImVec2(((sound_sprite.positionX + sound_sprite.sourceWidth) / (float)ATLAS_WIDTH), ((sound_sprite.positionY + sound_sprite.sourceHeight) / (float)ATLAS_HEIGHT)),
@@ -464,7 +464,7 @@ void draw_score(Renderer *renderer, Game_state *state)
     else
     {
 
-        if (ImGui::ImageButton("Sound", (void*)(intptr_t)renderer->textures[0],
+        if (ImGui::ImageButton("Sound", (void*)(intptr_t)engine->textures[0],
         		ImVec2(buttons.height * 0.9f, buttons.height * 0.9f),
         		ImVec2(((mute_sprite.positionX) / (float)ATLAS_WIDTH), ((mute_sprite.positionY) / (float)ATLAS_HEIGHT)),
     			ImVec2(((mute_sprite.positionX + mute_sprite.sourceWidth) / (float)ATLAS_WIDTH), ((mute_sprite.positionY + mute_sprite.sourceHeight) / (float)ATLAS_HEIGHT)),
@@ -477,7 +477,7 @@ void draw_score(Renderer *renderer, Game_state *state)
 
     ImGui::SameLine(0, 20);
 
-    if (ImGui::ImageButton("Pause", (void*)(intptr_t)renderer->textures[0],
+    if (ImGui::ImageButton("Pause", (void*)(intptr_t)engine->textures[0],
     		ImVec2(buttons.height * 0.9f, buttons.height * 0.9f),
     		ImVec2(((pause_sprite.positionX) / (float)ATLAS_WIDTH), ((pause_sprite.positionY) / (float)ATLAS_HEIGHT)),
 			ImVec2(((pause_sprite.positionX + pause_sprite.sourceWidth) / (float)ATLAS_WIDTH), ((pause_sprite.positionY + pause_sprite.sourceHeight) / (float)ATLAS_HEIGHT)),
@@ -494,7 +494,7 @@ void draw_score(Renderer *renderer, Game_state *state)
     ImGui::End();
 }
 
-void draw_status(Renderer *renderer, Game_state *state) {
+void draw_status(Engine *engine, Game_state *state) {
 
     ImGuiIO& io = ImGui::GetIO();
 
@@ -510,11 +510,11 @@ void draw_status(Renderer *renderer, Game_state *state) {
     // No Acepta entrada al juego en el menu
     state->accept_input = false;
 
-    ImGui::PushFont(renderer->font_large);
+    ImGui::PushFont(engine->font_large);
     
     if (!state->show_menu)
     {
-        ImGui::PushFont(renderer->font_title);
+        ImGui::PushFont(engine->font_title);
 
         if (state->status == INIT)
         {
@@ -543,7 +543,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
         // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().
         // During the frame, use ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values,
         // and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
-        if (renderer->device_type == PHONE && renderer->DISP_HEIGHT > renderer->DISP_WIDTH)
+        if (engine->device_type == PHONE && engine->DISP_HEIGHT > engine->DISP_WIDTH)
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(60, 60));
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
@@ -604,7 +604,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
 
         if (state->audio_enabled)
         {
-            if (ImGui::ImageButton("Sound", (void*)(intptr_t)renderer->textures[0],
+            if (ImGui::ImageButton("Sound", (void*)(intptr_t)engine->textures[0],
             		ImVec2(state->score_rect.height * 0.9f, state->score_rect.height * 0.9f),
             		ImVec2((sound_sprite.positionX / (float)ATLAS_WIDTH), (sound_sprite.positionY / (float)ATLAS_HEIGHT)),
         			ImVec2(((sound_sprite.positionX + sound_sprite.sourceWidth) / (float)ATLAS_WIDTH), ((sound_sprite.positionY + sound_sprite.sourceHeight) / (float)ATLAS_HEIGHT)),
@@ -617,7 +617,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
         else
         {
 
-            if (ImGui::ImageButton("Sound", (void*)(intptr_t)renderer->textures[0],
+            if (ImGui::ImageButton("Sound", (void*)(intptr_t)engine->textures[0],
             		ImVec2(state->score_rect.height * 0.9f, state->score_rect.height * 0.9f),
             		ImVec2(((mute_sprite.positionX) / (float)ATLAS_WIDTH), ((mute_sprite.positionY) / (float)ATLAS_HEIGHT)),
         			ImVec2(((mute_sprite.positionX + mute_sprite.sourceWidth) / (float)ATLAS_WIDTH), ((mute_sprite.positionY + mute_sprite.sourceHeight) / (float)ATLAS_HEIGHT)),
@@ -638,7 +638,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
         ImVec2 options_window_size;
 
         // TODO: Deberia buscar otra forma...
-        if (renderer->device_type == PHONE)
+        if (engine->device_type == PHONE)
         {
             options_window_size = ImVec2(ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
 
@@ -675,7 +675,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
         // ImGuiWindowFlags_AlwaysVerticalScrollbar
         ImGui::BeginChild("Options", options_window_size, ImGuiChildFlags_Border, ImGuiWindowFlags_NoSavedSettings);
 
-        if (renderer->device_type == PHONE && renderer->DISP_HEIGHT > renderer->DISP_WIDTH)
+        if (engine->device_type == PHONE && engine->DISP_HEIGHT > engine->DISP_WIDTH)
         {
             ImGui::Spacing();
             ImGui::Spacing();
@@ -710,7 +710,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
                 if (--current_item < 0) current_item = GAME_SKIN_COUNT - 1;
 
                 state->game_skin = (GAME_SKIN)current_item;
-                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
 
             ImGui::SameLine();
@@ -726,10 +726,10 @@ void draw_status(Renderer *renderer, Game_state *state) {
                 if (++current_item >= GAME_SKIN_COUNT) current_item = 0;
 
                 state->game_skin = (GAME_SKIN)current_item;
-                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
 
-			if (renderer->device_type == PHONE) ImGui::Spacing();
+			if (engine->device_type == PHONE) ImGui::Spacing();
         }
 
         ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_LEVEL));
@@ -756,7 +756,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
                 change_level(state, (GAME_LEVEL)_item);
                 update_snake(state);
                 // Need to recalculate the layout
-                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
 
             ImGui::SameLine();
@@ -775,10 +775,10 @@ void draw_status(Renderer *renderer, Game_state *state) {
                 change_level(state, (GAME_LEVEL)_item);
                 update_snake(state);
                 // Need to recalculate the layout
-                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
 
-            if (renderer->device_type == PHONE) ImGui::Spacing();
+            if (engine->device_type == PHONE) ImGui::Spacing();
         }
 
         ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_VELOCITY));
@@ -834,7 +834,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
             else if (_item == DIFFICULTY_FAST) state->time_step = DEFAULT_FAST_TIMESTEP;
             else if (_item == DIFFICULTY_PROGRESSIVE) state->time_step = DEFAULT_NORMAL_TIMESTEP;
 
-            if (renderer->device_type == PHONE) ImGui::Spacing();
+            if (engine->device_type == PHONE) ImGui::Spacing();
         }
 
 
@@ -863,7 +863,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
 
                 state->controller_type = (CONTROLLER_TYPE)_item;
 
-                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
 
             ImGui::SameLine();
@@ -882,7 +882,7 @@ void draw_status(Renderer *renderer, Game_state *state) {
 
                 state->controller_type = (CONTROLLER_TYPE)_item;
 
-                calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+                calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
         }
 
@@ -921,10 +921,10 @@ void draw_status(Renderer *renderer, Game_state *state) {
 }
 
 #if defined(NDEBUG)
-void draw_debug_window(Renderer *renderer, Game_state *state)
+void draw_debug_window(Engine *engine, Game_state *state)
 {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    ImGui::PushFont(renderer->font_debug);
+    ImGui::PushFont(engine->font_debug);
 
     //ImGui::SetNextWindowBgAlpha(0.80f); // Transparent background
     ImGui::Begin("Estado del juego", (bool*)&state->show_debug_overlay, window_flags);
@@ -1040,7 +1040,7 @@ void draw_debug_window(Renderer *renderer, Game_state *state)
 				{
 					current_item = (GAME_LEVEL)n;
 					change_level(state, current_item);
-					calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+					calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
 				}
 
 
@@ -1073,7 +1073,7 @@ void draw_debug_window(Renderer *renderer, Game_state *state)
 				{
 					current_item = (CONTROLLER_TYPE)n;
 					state->controller_type = current_item;
-					calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+					calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
 				}
 
 				if (is_selected)
@@ -1147,7 +1147,7 @@ void draw_debug_window(Renderer *renderer, Game_state *state)
     	if (state->rows < 10) state->rows = 10;
     	if (state->columns < 10) state->columns = 10;
 
-    	calculate_gui(state, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+    	calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
     }
 
     ImGui::Separator();
@@ -1265,7 +1265,7 @@ void draw_debug_window(Renderer *renderer, Game_state *state)
     ImGui::End();
 }
 
-void draw_debug_overlay(Renderer *renderer, Game_state *state)
+void draw_debug_overlay(Engine *engine, Game_state *state)
 {
     const float DISTANCE = 10.0f;
     static int corner = 3;
@@ -1295,14 +1295,14 @@ void draw_debug_overlay(Renderer *renderer, Game_state *state)
         else
             ImGui::Text("Mouse Position: <invalid>");
 
-        ImGui::Text("Windows Size: (%d, %d) - DPI: %0.1f", renderer->DISP_WIDTH, renderer->DISP_HEIGHT, renderer->dpi);
+        ImGui::Text("Windows Size: (%d, %d) - DPI: %0.1f", engine->DISP_WIDTH, engine->DISP_HEIGHT, engine->dpi);
         //ImGui::Text("Viewport Pos: (x = %d, y = %d) \nViewport Size: (w = %d, h = %d)", state->arena_rect.x, state->arena_rect.y, state->arena_rect.width, state->arena_rect.height);
 
         ImGui::Separator();
 
-        ImGui::ColorEdit3("Background##2f", &renderer->clear_color[0], ImGuiColorEditFlags_Float);
-        ImGui::ColorEdit3("Cells 1##2f", &renderer->cell_color1[0], ImGuiColorEditFlags_Float);
-        ImGui::ColorEdit3("Cells 2##2f", &renderer->cell_color2[0], ImGuiColorEditFlags_Float);
+        ImGui::ColorEdit3("Background##2f", &engine->clear_color[0], ImGuiColorEditFlags_Float);
+        ImGui::ColorEdit3("Cells 1##2f", &engine->cell_color1[0], ImGuiColorEditFlags_Float);
+        ImGui::ColorEdit3("Cells 2##2f", &engine->cell_color2[0], ImGuiColorEditFlags_Float);
 
         if (ImGui::BeginPopupContextWindow())
         {

@@ -4,7 +4,6 @@
 #if defined(__EMSCRIPTEN__) || defined(__ANDROID__)
 #include <SDL.h>
 #include <SDL_image.h>
-//#include <SDL_ttf.h>
 #include <SDL_mixer.h>
 
 #if defined(__EMSCRIPTEN__)
@@ -12,21 +11,10 @@
 #endif
 
 #else
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
-
 #endif
 
-#if defined(__ANDROID__)
-#include <SDL_opengles2.h>
-#else
-#include <SDL2/SDL_opengles2.h>
-//#include <GLES2/gl2.h>          // Use GL ES 2
-#endif
-
-#include "renderer.h"
+#include "engine.h"
 #include "assets_loader.h"
 #include "translate.h"
 
@@ -41,6 +29,8 @@
 #define DEFAULT_FAST_TIMESTEP 0.10f
 
 #define DIRECTION_BUFFER_SIZE 2
+
+#define ARBITRARY_DEFAULT_SOUND_COUNT 8   // This is a arbitrary number. @TODO: Find a better way!!!
 
 enum {
     CATEGORY_GAME_SNAKE = SDL_LOG_CATEGORY_CUSTOM,
@@ -188,6 +178,8 @@ struct Game_state {
     int32_t border_size = 0;
 
     int32_t score = 0;
+
+    Mix_Chunk* sounds[ARBITRARY_DEFAULT_SOUND_COUNT];
     
 #if defined(NDEBUG)
     // debug gui state
@@ -198,15 +190,15 @@ struct Game_state {
 };
 
 int log_init(Game_state *state);
-int32_t init_game(Renderer *renderer, Game_state *state);
+int32_t init_game(Engine *engine, Game_state *state);
 void set_game_state(Game_state *state);
 void main_loop();
-void process_events(Renderer *renderer, Game_state *state);
+void process_events(Engine *engine, Game_state *state);
 void update_game(Game_state *state, float elapsed_time);
 void update_snake(Game_state *state);
-void render_game(Renderer *renderer, Game_state *state);
+void render_game(Engine *engine, Game_state *state);
 
-void shutdown_game(Renderer *renderer);
+void shutdown_game(Engine *engine);
 
 // Init the levels
 void init_levels (Game_state *state);

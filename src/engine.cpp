@@ -1,6 +1,11 @@
-// Todo el trabajo de renderizar
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_opengles2.h>
 
-#include "renderer.h"
+#include <time.h>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "engine.h"
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
@@ -11,7 +16,7 @@
 #include <emscripten.h>
 #endif
 
-uint32_t init_renderer(Renderer *renderer)
+uint32_t init_engine(Engine *engine)
 {
     // Init the random number generator
     // TODO: Change to a better random number generator
@@ -56,10 +61,10 @@ uint32_t init_renderer(Renderer *renderer)
 
 #if defined(__EMSCRIPTEN__)
     // Get display resolution and device type (Phone or desktop) for emscripten
-    renderer->DISP_WIDTH = EM_ASM_INT(return window.innerWidth;);
-    renderer->DISP_HEIGHT = EM_ASM_INT(return window.innerHeight;);
+    engine->DISP_WIDTH = EM_ASM_INT(return window.innerWidth;);
+    engine->DISP_HEIGHT = EM_ASM_INT(return window.innerHeight;);
 
-    renderer->device_type = (DEVICE_TYPE) EM_ASM_INT(return device_type;);
+    engine->device_type = (DEVICE_TYPE) EM_ASM_INT(return device_type;);
 #endif
 
     //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
@@ -89,9 +94,9 @@ uint32_t init_renderer(Renderer *renderer)
     int32_t window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 #endif
 
-    renderer->window = SDL_CreateWindow("Snake2D", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, renderer->DISP_WIDTH, renderer->DISP_HEIGHT, window_flags);
+    engine->window = SDL_CreateWindow("Snake2D", SDL_WINDOWPOS_CENTERED,  SDL_WINDOWPOS_CENTERED, engine->DISP_WIDTH, engine->DISP_HEIGHT, window_flags);
 
-    if (!renderer->window)
+    if (!engine->window)
     {
         SDL_LogCritical(CATEGORY_ENGINE_SNAKE, "[SDL] Could't create the main window.");
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the main window.", NULL);
@@ -99,27 +104,27 @@ uint32_t init_renderer(Renderer *renderer)
     }
 
     // Get the provided window size
-    SDL_GetWindowSize(renderer->window, &renderer->DISP_WIDTH, &renderer->DISP_HEIGHT);
+    SDL_GetWindowSize(engine->window, &engine->DISP_WIDTH, &engine->DISP_HEIGHT);
 
     // Create OpenGL context
-    renderer->context = SDL_GL_CreateContext(renderer->window);
+    engine->context = SDL_GL_CreateContext(engine->window);
     
-    if (!renderer->context)
+    if (!engine->context)
     {
         SDL_LogCritical(CATEGORY_ENGINE_SNAKE, "[SDL] GL context creation failed!");
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could't create the OpenGL context.", NULL);
         return EXIT_FAILURE;
     }
 
-    SDL_GL_MakeCurrent(renderer->window, renderer->context);
+    SDL_GL_MakeCurrent(engine->window, engine->context);
 
     // TODO: Adaptar a los DPI de la plataforma.
-    SDL_GetDisplayDPI(0, &renderer->dpi, 0, 0);
+    SDL_GetDisplayDPI(0, &engine->dpi, 0, 0);
 
     int drawable_width, drawable_height;
-    SDL_GL_GetDrawableSize(renderer->window, &drawable_width, &drawable_height);
+    SDL_GL_GetDrawableSize(engine->window, &drawable_width, &drawable_height);
 
-    SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "Window Size: (%d, %d) Drawable Area Size: (%d, %d) DPI: %f", renderer->DISP_WIDTH, renderer->DISP_WIDTH, drawable_width, drawable_height, renderer->dpi);
+    SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "Window Size: (%d, %d) Drawable Area Size: (%d, %d) DPI: %f", engine->DISP_WIDTH, engine->DISP_WIDTH, drawable_width, drawable_height, engine->dpi);
 
     // NOTE: No VSync with EMSCRIPTEN
 	#if !defined(__EMSCRIPTEN__)
@@ -137,12 +142,12 @@ uint32_t init_renderer(Renderer *renderer)
     SDL_ShowCursor(SDL_DISABLE);
 #endif
 
-    //SDL_SetWindowResizable(renderer->window, SDL_TRUE);
-    SDL_SetWindowMinimumSize(renderer->window, 960, 540);
+    //SDL_SetWindowResizable(engine->window, SDL_TRUE);
+    SDL_SetWindowMinimumSize(engine->window, 960, 540);
 
-    glViewport(0, 0, renderer->DISP_WIDTH, renderer->DISP_HEIGHT);
+    glViewport(0, 0, engine->DISP_WIDTH, engine->DISP_HEIGHT);
 
-    renderer->disp_orientation = SDL_GetDisplayOrientation(0);
+    engine->disp_orientation = SDL_GetDisplayOrientation(0);
 
     //
     // Show version number of stuff
@@ -174,7 +179,7 @@ uint32_t init_renderer(Renderer *renderer)
     ImGui::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL2_InitForOpenGL(renderer->window, renderer->context);
+    ImGui_ImplSDL2_InitForOpenGL(engine->window, engine->context);
     ImGui_ImplOpenGL3_Init(glsl_version);
     
 
@@ -195,7 +200,7 @@ uint32_t init_renderer(Renderer *renderer)
         return false;
     }
 
-    init_camera_2d(&renderer->camera, renderer->DISP_WIDTH, renderer->DISP_HEIGHT, glm::vec2(0, 0));
+    init_camera_2d(&engine->camera, engine->DISP_WIDTH, engine->DISP_HEIGHT, glm::vec2(0, 0));
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -226,14 +231,14 @@ uint32_t init_renderer(Renderer *renderer)
 
 
     // Create a dynamic vertex buffer
-    glGenBuffers(1, &renderer->main_batch.vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->main_batch.vertex_buffer);
+    glGenBuffers(1, &engine->main_batch.vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, engine->main_batch.vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER, MaxVertexCount * sizeof(Vertex), NULL, GL_DYNAMIC_DRAW);
 
 
     // Create the index buffer
-    glGenBuffers(1, &renderer->main_batch.index_buffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->main_batch.index_buffer);
+    glGenBuffers(1, &engine->main_batch.index_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, engine->main_batch.index_buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, MaxIndexCount * sizeof(unsigned short), indices, GL_STATIC_DRAW);
 
 
@@ -243,6 +248,10 @@ uint32_t init_renderer(Renderer *renderer)
     glBindTexture(GL_TEXTURE_2D, 0);
 
     print_gles_errors();
+
+
+    // @Temporal
+    init_asset_manager(&engine->assets);
 
    
     return success;
@@ -384,28 +393,28 @@ void begin_batch(Batch *batch)
 }
 
 // TODO: Podria replicar el comportamiento de los VAO usando funciones...
-void init_main_shader_attribs(Renderer *renderer) {
+void init_main_shader_attribs(Engine *engine) {
 
-    if (!renderer->attribs_enabled)
+    if (!engine->attribs_enabled)
     {
-        renderer->AttribLocationVtxPos = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_pos");
-        renderer->AttribLocationVtxUV = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_texCoord");
-        renderer->AttribLocationVtxColor = glGetAttribLocation(renderer->shaders[TEXTURE_SHADER], "a_color");;
+        engine->AttribLocationVtxPos = glGetAttribLocation(engine->shaders[TEXTURE_SHADER], "a_pos");
+        engine->AttribLocationVtxUV = glGetAttribLocation(engine->shaders[TEXTURE_SHADER], "a_texCoord");
+        engine->AttribLocationVtxColor = glGetAttribLocation(engine->shaders[TEXTURE_SHADER], "a_color");;
 
-        renderer->attribs_enabled = true;
+        engine->attribs_enabled = true;
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->main_batch.vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, engine->main_batch.vertex_buffer);
 
     // NOTA: Este estado se eliminan cuando se usa glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glVertexAttribPointer(renderer->AttribLocationVtxPos, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
-    glEnableVertexAttribArray(renderer->AttribLocationVtxPos);
+    glVertexAttribPointer(engine->AttribLocationVtxPos, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
+    glEnableVertexAttribArray(engine->AttribLocationVtxPos);
 
-    glVertexAttribPointer(renderer->AttribLocationVtxColor, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, r));
-    glEnableVertexAttribArray(renderer->AttribLocationVtxColor);
+    glVertexAttribPointer(engine->AttribLocationVtxColor, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, r));
+    glEnableVertexAttribArray(engine->AttribLocationVtxColor);
 
-    glVertexAttribPointer(renderer->AttribLocationVtxUV, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, u));
-    glEnableVertexAttribArray(renderer->AttribLocationVtxUV);
+    glVertexAttribPointer(engine->AttribLocationVtxUV, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, u));
+    glEnableVertexAttribArray(engine->AttribLocationVtxUV);
 
     print_gles_errors();
 }
@@ -424,15 +433,15 @@ void print_gles_errors()
 }
 
 
-void shutdown_renderer(Renderer *renderer) 
+void shutdown_engine(Engine *engine)
 {
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DeleteContext(renderer->context);
-    SDL_DestroyWindow(renderer->window);
+    SDL_GL_DeleteContext(engine->context);
+    SDL_DestroyWindow(engine->window);
     SDL_Quit();
 }
 

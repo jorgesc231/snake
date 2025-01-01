@@ -2,6 +2,8 @@
 #include "assets_loader.h"
 #include "snake.h"
 
+#include <SDL2/SDL_image.h>
+
 #include <stdio.h>
 
 #if defined(__ANDROID__)
@@ -476,15 +478,15 @@ uint32_t init_audio(Mix_Chunk **sounds_buffer, int SND_MAX)
 }
 
 // Load Saved State File
-int load_state_file(AssetManager *assets, const char *filename, Game_state *state)
+int load_state_file(Engine *engine, const char *filename, Game_state *state)
 {
-    char *absolute_path = get_base_path(assets, filename);
+    char *absolute_path = get_base_path(&engine->assets, filename);
 
     SDL_LogDebug(CATEGORY_GAME_SNAKE, "Loading File: %s\n", absolute_path);
 
     // TODO: Temporal
     static char path_buffer[PATH_MAX];
-    snprintf(path_buffer, PATH_MAX, "%s/%s", assets->android_internal_storage_path, filename);
+    snprintf(path_buffer, PATH_MAX, "%s/%s", &engine->assets.android_internal_storage_path, filename);
 
 #if defined(__ANDROID__)
     SDL_RWops *file = SDL_RWFromFile(path_buffer, "r");
@@ -512,7 +514,7 @@ int load_state_file(AssetManager *assets, const char *filename, Game_state *stat
 
     sscanf((const char *)&buffer,
     		"ver %d\naudio %d\nskin %d\ndif %d\ncon %d\nlevel %d\n%d %d %d %d\n%d %d %d %d\n%d %d %d %d\n%d %d %d %d\n",
-            &assets->config_version,
+            &engine->assets.config_version,
     		(int32_t*)&state->audio_enabled, (int32_t*)&state->game_skin, (int32_t*)&state->difficulty,
 			(int32_t*)&state->controller_type, (int32_t*)&state->selected_level,
 
@@ -547,15 +549,15 @@ int load_state_file(AssetManager *assets, const char *filename, Game_state *stat
 }
 
 // Load Saved State File
-bool write_state_file(AssetManager *assets, const char *filename, Game_state *state)
+bool write_state_file(Engine *engine, const char *filename, Game_state *state)
 {
-    char *absolute_path = get_base_path(assets, filename);
+    char *absolute_path = get_base_path(&engine->assets, filename);
 
     SDL_LogDebug(CATEGORY_GAME_SNAKE, "Loading Config File: %s\n", absolute_path);
 
     // TODO: Temporal
     static char path_buffer[PATH_MAX];
-    snprintf(path_buffer, PATH_MAX, "%s/%s", assets->android_internal_storage_path, filename);
+    snprintf(path_buffer, PATH_MAX, "%s/%s", &engine->assets.android_internal_storage_path, filename);
 
 #if defined(__ANDROID__)
     SDL_RWops *file = SDL_RWFromFile(path_buffer, "w");

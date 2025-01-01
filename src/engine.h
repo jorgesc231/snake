@@ -1,19 +1,12 @@
 #ifndef __RENDERER_H__
 #define __RENDERER_H__
 
-#include <stdio.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengles2.h>
-#include <SDL2/SDL_image.h>
+
+#include <imgui.h>
 
 #include "assets_loader.h"
-#include <imgui.h>
 
 #define PHONE_MAIN_FONT_SIZE 64.0f
 #define PHONE_LARGE_FONT_SIZE 84.0f
@@ -83,9 +76,14 @@ struct Batch {
     Vertex* vertices_ptr;
 };
 
-struct Renderer {
+struct Engine {
     SDL_Window* window = NULL;
     SDL_GLContext context = NULL;
+
+    uint64_t prev_time = SDL_GetTicks64();
+    
+    //Renderer renderer;
+    AssetManager assets;
 
     SDL_DisplayOrientation disp_orientation;
     // Resolucion por defecto... Aspect Ratio por defecto...
@@ -131,20 +129,20 @@ struct Renderer {
 };
 
 
-uint32_t init_renderer(Renderer *renderer);
-void shutdown_renderer(Renderer *renderer);
+uint32_t init_engine(Engine *engine);
+void shutdown_engine(Engine *engine);
 
 void init_camera_2d(Camera *camera, float width, float height, glm::vec2 camera_pos);
 
 void begin_batch(Batch *batch);
-void draw_batch(Renderer renderer, Batch batch);
+void draw_batch(Engine engine, Batch batch);
 
 void create_quad(Batch *batch, Quad quad, SPRITE_ID sprite_id, glm::vec4 color);
 void create_color_triangle(Batch *batch, Triangle triangle, glm::vec4 color);
 
 void print_gles_errors();
 
-void init_main_shader_attribs(Renderer *renderer);
+void init_main_shader_attribs(Engine *engine);
 
 float sign (simple_vertex p1, simple_vertex p2, simple_vertex p3);
 bool is_over_triangle (Triangle triangle, int x, int y);

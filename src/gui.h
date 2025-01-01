@@ -3,17 +3,19 @@
 
 //#define IMGUI_IMPL_OPENGL_DEBUG
 
+#include <imgui.h>
+
 #include "snake.h"
 
-void draw_gui(Renderer *renderer, Game_state *state);
-void draw_score(Renderer *renderer, Game_state *state);
-void draw_status(Renderer *renderer, Game_state *state);
-void draw_debug_window(Renderer *renderer, Game_state *state);
-void draw_debug_overlay(Renderer *renderer, Game_state *state);
+void draw_gui(Engine *engine, Game_state *state);
+void draw_score(Engine *engine, Game_state *state);
+void draw_status(Engine *engine, Game_state *state);
+void draw_debug_window(Engine *engine, Game_state *state);
+void draw_debug_overlay(Engine *engine, Game_state *state);
 
 void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_height);
 void create_touch_controls(Game_state *state);
-void draw_touch_controls(Game_state *state, Renderer *renderer);
+void draw_touch_controls(Game_state *state, Engine *engine);
 
 void calculate_pad_triangles (Game_state *state, Rect rect);
 void draw_pad_triangles (Game_state *state, Batch *batch, glm::vec4 color, glm::vec4 color_pressded);

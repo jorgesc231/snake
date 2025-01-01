@@ -7,8 +7,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_opengles2.h>
 
@@ -24,6 +22,7 @@
 #define CONFIG_FORMAT_VERSION 1
 
 struct Game_state;
+struct Engine;
 
 struct AssetManager {
     int config_version = 0;
@@ -165,8 +164,8 @@ static AtlasSprite DescAtlas[] = {
     { CLASSIC_FOOD, SPRITE_POS(6), SPRITE_POS(4), SPRITE_SIZE, SPRITE_SIZE, 0},
 };
 
-int load_state_file(AssetManager *assets, const char *filename, Game_state *state);
-bool write_state_file(AssetManager *assets, const char *filename, Game_state *state);
+int load_state_file(Engine *engine, const char *filename, Game_state *state);
+bool write_state_file(Engine *engine, const char *filename, Game_state *state);
 
 uint32_t init_asset_manager(AssetManager *manager);
 

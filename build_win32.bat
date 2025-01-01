@@ -19,11 +19,11 @@ windres assets\snake_res.rc -o assets\snake_res.o
 REM Release
 if "%1" == "release" (
 	ECHO RELEASE BUILD
-	g++ -O3 --static %SRC_PATH%/main.cpp %SRC_PATH%/renderer.cpp %SRC_PATH%/assets_loader.cpp %SRC_PATH%/gui.cpp assets/snake_res.o %DEP_PATH%/imgui/imgui.cpp %DEP_PATH%/imgui/imgui_draw.cpp %DEP_PATH%/imgui/imgui_impl_opengl3.cpp %DEP_PATH%/imgui/imgui_impl_sdl2.cpp %DEP_PATH%/imgui/imgui_tables.cpp %DEP_PATH%/imgui/imgui_widgets.cpp %DEP_PATH%/imgui/imgui_demo.cpp -Wl,-subsystem,windows -o %BUILD_DIR%\snake_win32 -I%DEP_PATH% -I%DEP_PATH%/SDL2 -I%DEP_PATH%/angle -I%DEP_PATH%/imgui -D_REENTRANT -Ldependencies/lib -lmingw32 -l:libEGL.dll.lib -l:libGLESv2.dll.lib -lSDL2main -lSDL2.dll -lSDL2_image.dll -lSDL2_mixer.dll -lm -D_WIN32 -DIMGUI_IMPL_OPENGL_ES2
+	g++ -O3 --static %SRC_PATH%/main.cpp %SRC_PATH%/engine.cpp %SRC_PATH%/assets_loader.cpp %SRC_PATH%/gui.cpp assets/snake_res.o %DEP_PATH%/imgui/imgui.cpp %DEP_PATH%/imgui/imgui_draw.cpp %DEP_PATH%/imgui/imgui_impl_opengl3.cpp %DEP_PATH%/imgui/imgui_impl_sdl2.cpp %DEP_PATH%/imgui/imgui_tables.cpp %DEP_PATH%/imgui/imgui_widgets.cpp %DEP_PATH%/imgui/imgui_demo.cpp -Wl,-subsystem,windows -o %BUILD_DIR%\snake_win32 -I%DEP_PATH% -I%DEP_PATH%/SDL2 -I%DEP_PATH%/angle -I%DEP_PATH%/imgui -D_REENTRANT -Ldependencies/lib -lmingw32 -l:libEGL.dll.lib -l:libGLESv2.dll.lib -lSDL2main -lSDL2.dll -lSDL2_image.dll -lSDL2_mixer.dll -lm -D_WIN32 -DIMGUI_IMPL_OPENGL_ES2
 ) else (
 REM Debug
 	ECHO DEBUG BUILD
-	g++ -g -O0 --static %SRC_PATH%/main.cpp %SRC_PATH%/renderer.cpp %SRC_PATH%/assets_loader.cpp %SRC_PATH%/gui.cpp %DEP_PATH%/imgui/imgui.cpp %DEP_PATH%/imgui/imgui_draw.cpp %DEP_PATH%/imgui/imgui_impl_opengl3.cpp %DEP_PATH%/imgui/imgui_impl_sdl2.cpp %DEP_PATH%/imgui/imgui_tables.cpp %DEP_PATH%/imgui/imgui_widgets.cpp %DEP_PATH%/imgui/imgui_demo.cpp -o %BUILD_DIR%\snake_win32 -I%DEP_PATH% -I%DEP_PATH%/SDL2 -I%DEP_PATH%/angle -I%DEP_PATH%/imgui -D_REENTRANT -Ldependencies/lib -lmingw32 -l:libEGL.dll.lib -l:libGLESv2.dll.lib -lSDL2main -lSDL2.dll -lSDL2_image.dll -lSDL2_mixer.dll -lm -D_WIN32 -DIMGUI_IMPL_OPENGL_ES2 -DNDEBUG
+	g++ -g -O0 --static %SRC_PATH%/main.cpp %SRC_PATH%/engine.cpp %SRC_PATH%/assets_loader.cpp %SRC_PATH%/gui.cpp assets/snake_res.o %DEP_PATH%/imgui/imgui.cpp %DEP_PATH%/imgui/imgui_draw.cpp %DEP_PATH%/imgui/imgui_impl_opengl3.cpp %DEP_PATH%/imgui/imgui_impl_sdl2.cpp %DEP_PATH%/imgui/imgui_tables.cpp %DEP_PATH%/imgui/imgui_widgets.cpp %DEP_PATH%/imgui/imgui_demo.cpp -o %BUILD_DIR%\snake_win32 -I%DEP_PATH% -I%DEP_PATH%/SDL2 -I%DEP_PATH%/angle -I%DEP_PATH%/imgui -D_REENTRANT -Ldependencies/lib -lmingw32 -l:libEGL.dll.lib -l:libGLESv2.dll.lib -lSDL2main -lSDL2.dll -lSDL2_image.dll -lSDL2_mixer.dll -lm -D_WIN32 -DIMGUI_IMPL_OPENGL_ES2 -DNDEBUG
 )
 
 IF %ERRORLEVEL% EQU 0 (
