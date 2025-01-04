@@ -543,7 +543,7 @@ void draw_status(Engine *engine, Game_state *state) {
         // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().
         // During the frame, use ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values,
         // and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
-        if (engine->device_type == PHONE && engine->DISP_HEIGHT > engine->DISP_WIDTH)
+        if (engine->device_type == ENGINE_PHONE && engine->DISP_HEIGHT > engine->DISP_WIDTH)
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(60, 60));
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 20.0f);
@@ -638,7 +638,7 @@ void draw_status(Engine *engine, Game_state *state) {
         ImVec2 options_window_size;
 
         // TODO: Deberia buscar otra forma...
-        if (engine->device_type == PHONE)
+        if (engine->device_type == ENGINE_PHONE)
         {
             options_window_size = ImVec2(ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
 
@@ -675,7 +675,7 @@ void draw_status(Engine *engine, Game_state *state) {
         // ImGuiWindowFlags_AlwaysVerticalScrollbar
         ImGui::BeginChild("Options", options_window_size, ImGuiChildFlags_Border, ImGuiWindowFlags_NoSavedSettings);
 
-        if (engine->device_type == PHONE && engine->DISP_HEIGHT > engine->DISP_WIDTH)
+        if (engine->device_type == ENGINE_PHONE && engine->DISP_HEIGHT > engine->DISP_WIDTH)
         {
             ImGui::Spacing();
             ImGui::Spacing();
@@ -729,7 +729,7 @@ void draw_status(Engine *engine, Game_state *state) {
                 calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
 
-			if (engine->device_type == PHONE) ImGui::Spacing();
+			if (engine->device_type == ENGINE_PHONE) ImGui::Spacing();
         }
 
         ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_LEVEL));
@@ -778,7 +778,7 @@ void draw_status(Engine *engine, Game_state *state) {
                 calculate_gui(state, engine->DISP_WIDTH, engine->DISP_HEIGHT);
             }
 
-            if (engine->device_type == PHONE) ImGui::Spacing();
+            if (engine->device_type == ENGINE_PHONE) ImGui::Spacing();
         }
 
         ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_VELOCITY));
@@ -834,7 +834,7 @@ void draw_status(Engine *engine, Game_state *state) {
             else if (_item == DIFFICULTY_FAST) state->time_step = DEFAULT_FAST_TIMESTEP;
             else if (_item == DIFFICULTY_PROGRESSIVE) state->time_step = DEFAULT_NORMAL_TIMESTEP;
 
-            if (engine->device_type == PHONE) ImGui::Spacing();
+            if (engine->device_type == ENGINE_PHONE) ImGui::Spacing();
         }
 
 

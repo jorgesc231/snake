@@ -28,9 +28,9 @@
 #define DEFAULT_CELL_COLOR1 glm::vec4(0.67f, 0.84f, 0.32f, 1.0f)
 #define DEFAULT_CELL_COLOR2 glm::vec4(0.64f, 0.82f, 0.29f, 1.0f)
 
-enum DEVICE_TYPE {
-    DESKTOP,
-    PHONE,
+enum ENGINE_DEVICE_TYPE {
+    ENGINE_DESKTOP,
+    ENGINE_PHONE,
 };
 
 enum _SHADERS {
@@ -93,10 +93,10 @@ struct Engine {
 
     // TODO: Temporal (Tiene que haber una forma menos estupida...)
 	#if defined(__ANDROID__)
-    DEVICE_TYPE device_type = PHONE;
+    ENGINE_DEVICE_TYPE device_type = ENGINE_PHONE;
     int scale_factor = 2;
     #else
-    DEVICE_TYPE device_type = DESKTOP;
+    ENGINE_DEVICE_TYPE device_type = ENGINE_DESKTOP;
     int scale_factor = 1;
 	#endif
 

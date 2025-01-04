@@ -64,7 +64,7 @@ uint32_t init_engine(Engine *engine)
     engine->DISP_WIDTH = EM_ASM_INT(return window.innerWidth;);
     engine->DISP_HEIGHT = EM_ASM_INT(return window.innerHeight;);
 
-    engine->device_type = (DEVICE_TYPE) EM_ASM_INT(return device_type;);
+    engine->device_type = (ENGINE_DEVICE_TYPE) EM_ASM_INT(return device_type;);
 #endif
 
     //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);

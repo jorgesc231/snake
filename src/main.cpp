@@ -80,7 +80,7 @@ int32_t init_game(Engine *engine, Game_state *state)
 {
 	get_system_language(state);
 
-    if (engine->device_type == PHONE)
+    if (engine->device_type == ENGINE_PHONE)
     {
         state->controller_type = CONTROLLER_TOUCH;
         state->selected_level = LEVEL_PHONE;
