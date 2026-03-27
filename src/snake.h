@@ -139,6 +139,7 @@ struct Game_state {
 	int32_t audio_loaded = false;
 	int32_t audio_enabled = true;
     
+    int32_t lerp = true;
 	int32_t show_status_screen = true;
 	int32_t accept_input = true;
 
@@ -164,6 +165,7 @@ struct Game_state {
     float time_out = 0.6;
     int32_t time_out_completed = false;
 
+    Snake snake_old[MAX_SNAKE_LENGTH] = {0};
     Snake snake[MAX_SNAKE_LENGTH] = {0};
     int32_t tail_counter = 0;
 
