@@ -558,7 +558,7 @@ void update_game (Game_state *state, float elapsed_time) {
 
     state->time += elapsed_time;
     
-    if (state->status != PAUSED)
+    if (state->status != PAUSED && state->status != LOST)
     {
         prueba_time += elapsed_time;
     }
@@ -566,11 +566,15 @@ void update_game (Game_state *state, float elapsed_time) {
     SDL_LogDebug(CATEGORY_GAME_SNAKE, "time = %f - elapsed_time = %f", prueba_time, elapsed_time);
 
     // Actualizacion de estado del juego
-
-    if (state->time > state->time_step && state->status == PLAY)
+    // NOTA: Importante el >= para que no parpadeen cosas
+    if (state->time >= state->time_step && state->status == PLAY)
     {
         update_snake(state);
         state->time = 0;
+
+        // IMPORTANTE: Le restamos los 150ms al temporizador en lugar de igualarlo a 0.
+        // Esto evita que el juego se ralentice si un frame dura un poco más de lo normal.
+        //prueba_time -= state->time_step;
         prueba_time = 0;
     }
 
@@ -725,9 +729,16 @@ void update_snake(Game_state *state)
     }
 }
 
-
+// De los dos valores toma el mas pequeño
 #define Min(a,b) (((a)<(b))?(a):(b))
+// De los dos valores toma el mas grande
 #define Max(a,b) (((a)>(b))?(a):(b))
+
+// Primero toma el mayor entre el valor y el suelo (0.0)
+// Luego toma el menor entre el resultado y el techo (1.0)
+float Clamp(float valor, float minimo, float maximo)  {
+    return Max(minimo, Min(valor, maximo));
+}
 
 // TODO: Experimentando con lerp deberia estar en otro archivo
 float lerp(float a, float t, float b) {
@@ -827,44 +838,45 @@ void render_game(Engine *engine, Game_state *state)
     int shrinking_size = 0;
     int expanding_size = 0;
 
+    float time_between = prueba_time / state->time_step;
+
+    // Limitamos time_between a 1.0 para que no se pase del objetivo
+    time_between = Min(time_between, 1.0f);
+
     // Draw the Snake
     for (int32_t i = state->tail_counter - 1; i >= 0; i--)
     {
         //Quad snake_quad = (Quad) {state->snake[i].position.x * state->cell_size + state->screen_rect.x, state->snake[i].position.y * state->cell_size + state->screen_rect.y, state->cell_size, state->cell_size};
         Quad snake_quad = {0};
         
-        int snake_x = state->snake[i].position.x * state->cell_size + state->screen_rect.x;
-        int snake_y = state->snake[i].position.y * state->cell_size + state->screen_rect.y;
-
-        float time_between = prueba_time / state->time_step;
+        v2 snake_pos = game_to_screen_pos(state->snake[i].position, state);
 
         if (state->lerp) {
             int old_snake_x = state->snake_old[i].position.x * state->cell_size + state->screen_rect.x;
             int old_snake_y = state->snake_old[i].position.y * state->cell_size + state->screen_rect.y;
     
-            if (prueba_time < state->time_step) {
-                
-    
-                prueba_x = lerp(old_snake_x, time_between, snake_x);
-                prueba_y = lerp(old_snake_y, time_between, snake_y);
+            if (prueba_time < state->time_step) {  
+                prueba_x = lerp(old_snake_x, time_between, snake_pos.x);
+                prueba_y = lerp(old_snake_y, time_between, snake_pos.y);
                 shrinking_size = lerp(state->cell_size, time_between, 0);
-                expanding_size = lerp(0, time_between, state->cell_size + 20);
+                expanding_size = lerp(0.0f, time_between, state->cell_size);
             } else {
-                prueba_x = snake_x;
-                prueba_y = snake_y;
+                prueba_x = snake_pos.x;
+                prueba_y = snake_pos.y;
             }
         
     
            #if 0
             if (i == 0) {
-                SDL_LogDebug(CATEGORY_GAME_SNAKE, "LERP: old_x = %d - target_x = %d - lerp_x = %f", old_snake_x, snake_x, prueba_x);
-                SDL_LogDebug(CATEGORY_GAME_SNAKE, "TIME: time_step = %f - elpased_time = %f", state->time_step, prueba_time);
+                SDL_LogDebug(CATEGORY_GAME_SNAKE, "LERP: old_x = %d - target_x = %d - lerp_x = %f", old_snake_x, snake_pos.x, prueba_x);
+                SDL_LogDebug(CATEGORY_GAME_SNAKE, "TIME: time_step = %f - elapsed_time = %f", state->time_step, prueba_time);
+                SDL_LogDebug(CATEGORY_GAME_SNAKE, "TIME: time between = %f", time_between);
             }
             #endif
          
             snake_quad = (Quad) {prueba_x, prueba_y, state->cell_size, state->cell_size};
         } else {
-            snake_quad = (Quad) {snake_x, snake_y, state->cell_size, state->cell_size};
+            snake_quad = (Quad) {snake_pos.x, snake_pos.y, state->cell_size, state->cell_size};
         }
     
         SPRITE_ID sprite = NO_TEXTURE;
@@ -927,8 +939,11 @@ void render_game(Engine *engine, Game_state *state)
                             relleno.x = state->snake[i].position.x * state->cell_size + state->screen_rect.x;
                             relleno.y = state->snake[i].position.y * state->cell_size + state->screen_rect.y;
 
-                            int limit_x = state->snake[i].position.x * state->cell_size + state->screen_rect.x + state->cell_size;
-                            int limit_y = state->snake[i].position.y * state->cell_size + state->screen_rect.y + state->cell_size;
+                            // TODO: No se si es necesario
+                            // Crea un limite hasta donde se puede mover el quad cuando le cambio el tamaño
+                            v2 quad_limit = game_to_screen_pos(state->snake[i].position, state);
+                            quad_limit.x += state->cell_size;
+                            quad_limit.y += state->cell_size;
 
                             // Top Right (Tail Right)
                             if (state->snake[i].direction.y == -1 && state->snake_old[i].direction.x == -1)
@@ -937,7 +952,7 @@ void render_game(Engine *engine, Game_state *state)
                                 sprite = state->game_skin == SKIN_DEFAULT ? TAIL_RIGHT : RARE_TAIL_RIGHT;
 
                                 snake_quad.width = shrinking_size;
-                                if (snake_quad.x < limit_x) snake_quad.x = limit_x;
+                                if (snake_quad.x < quad_limit.x) snake_quad.x = quad_limit.x;
 
                                 create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                             }
@@ -949,7 +964,7 @@ void render_game(Engine *engine, Game_state *state)
                                 sprite = state->game_skin == SKIN_DEFAULT ? TAIL_RIGHT : RARE_TAIL_RIGHT;
 
                                 snake_quad.width = shrinking_size;
-                                if (snake_quad.x < limit_x) snake_quad.x = limit_x;
+                                if (snake_quad.x < quad_limit.x) snake_quad.x = quad_limit.x;
 
                                 create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                             }
@@ -984,7 +999,7 @@ void render_game(Engine *engine, Game_state *state)
                                 sprite = state->game_skin == SKIN_DEFAULT ? TAIL_DOWN : RARE_TAIL_DOWN;
 
                                 snake_quad.height = shrinking_size;
-                                if (snake_quad.y < limit_y) snake_quad.y = limit_y;
+                                if (snake_quad.y < quad_limit.y) snake_quad.y = quad_limit.y;
 
                                 create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                             }
@@ -996,7 +1011,7 @@ void render_game(Engine *engine, Game_state *state)
                                 sprite = state->game_skin == SKIN_DEFAULT ? TAIL_DOWN : RARE_TAIL_DOWN;
 
                                 snake_quad.height = shrinking_size;
-                                if (snake_quad.y < limit_y) snake_quad.y = limit_y;
+                                if (snake_quad.y < quad_limit.y) snake_quad.y = quad_limit.y;
 
                                 create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                             }
@@ -1101,124 +1116,100 @@ void render_game(Engine *engine, Game_state *state)
                     {
                         // Se mueve en vertical
                         if (state->snake[i].direction.x == 0 && (state->snake[i].direction.y == -1 || state->snake[i].direction.y == 1))
-                        {
-                            Quad relleno = snake_quad;
-                            
+                        {                          
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_VERTICAL : RARE_BODY_VERTICAL;
                             
                             if (i == 1 && !(state->snake[i].direction.y != state->snake[i + 1].direction.y)) {
                                 
-                                if (state->snake[i].direction.y == 1)
+                                if (state->snake[i].direction.y == 1 && state->lerp)
                                 {
-                                    snake_quad.y = state->snake[i].position.y * state->cell_size + state->screen_rect.y + state->cell_size;
-                                    snake_quad.y -= state->cell_size;
+                                    snake_quad.y = state->snake[i].position.y * state->cell_size + state->screen_rect.y;
                                 } 
-                                else if (state->snake[i].direction.y == -1) {
-                                    ; // no dibujar el relleno ni cambiar la posicion del cuerpo en este caso
-                                }
-                                else {
-                                    create_quad(&engine->main_batch, relleno, state->game_skin == SKIN_DEFAULT ? BODY_VERTICAL : RARE_BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                                }
 
-                                snake_quad.height = expanding_size;
-
-                                
+                                snake_quad.height = expanding_size;                               
                             } else {
-                                snake_quad.x = snake_x;
-                                snake_quad.y = snake_y;
+                                snake_quad.x = snake_pos.x;
+                                snake_quad.y = snake_pos.y;
                             }
                         }
-#if 1
+
                         // Se mueve en horizontal
                         if (state->snake[i].direction.y == 0 && (state->snake[i].direction.x == -1 || state->snake[i].direction.x == 1))
-                        {
-                            Quad relleno = snake_quad;
-                            
+                        {                          
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_HORIZONTAL : RARE_BODY_HORIZONTAL;
-                            //sprite = RARE_BODY_HORIZONTAL;
                             
-                            if (i == 1 && !(state->snake[i].direction.x != state->snake[i + 1].direction.x)) {
+                            if (i == 1 && state->snake[i].direction.x == state->snake[i + 1].direction.x) {
 
-                                if (state->snake[i].direction.x == 1)
+                                if (state->snake[i].direction.x == 1 && state->lerp)
                                 {
-                                    snake_quad.x = state->snake[i].position.x * state->cell_size + state->screen_rect.x + state->cell_size;
-                                    snake_quad.x -= state->cell_size;
-                                }
-                                else if (state->snake[i].direction.x == -1) {
-                                    ; // no dibujar el relleno ni cambiar la posicion del cuerpo en este caso
-                                }
-                                else {
-                                    // Agrega un relleno para que no parpadee el cuello...
-                                    create_quad(&engine->main_batch, relleno, state->game_skin == SKIN_DEFAULT ? BODY_HORIZONTAL : RARE_BODY_HORIZONTAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    snake_quad.x = state->snake[i].position.x * state->cell_size + state->screen_rect.x;
                                 }
 
                                 snake_quad.width = expanding_size;
                             }
                             else {
-                                snake_quad.x = snake_x;
-                                snake_quad.y = snake_y;
+                                snake_quad.x = snake_pos.x;
+                                snake_quad.y = snake_pos.y;
                             }
-
                         }
-#endif
 
                         // Movimientos en giro
                         if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == 1) && (state->snake[i + 1].direction.x == 1 && state->snake[i + 1].direction.y == 0))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMLEFT : RARE_BODY_BOTTOMLEFT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
 
                         if ((state->snake[i].direction.x == 1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == 1))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPRIGHT : RARE_BODY_TOPRIGHT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
 
                         #if 1
                         if ((state->snake[i].direction.x == -1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == 1))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPLEFT : RARE_BODY_TOPLEFT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
                         #endif
 #if 1
                         if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == -1) && (state->snake[i + 1].direction.x == 1 && state->snake[i + 1].direction.y == 0))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPLEFT : RARE_BODY_TOPLEFT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
 #endif
                         if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == -1) && (state->snake[i + 1].direction.x == -1 && state->snake[i + 1].direction.y == 0))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_TOPRIGHT : RARE_BODY_TOPRIGHT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
 
                         if ((state->snake[i].direction.x == 1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == -1))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMRIGHT : RARE_BODY_BOTTOMRIGHT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
 
                         if ((state->snake[i].direction.x == -1 && state->snake[i].direction.y == 0) && (state->snake[i + 1].direction.x == 0 && state->snake[i + 1].direction.y == -1))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMLEFT : RARE_BODY_BOTTOMLEFT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
 
                         if ((state->snake[i].direction.x == 0 && state->snake[i].direction.y == 1) && (state->snake[i + 1].direction.x == -1 && state->snake[i + 1].direction.y == 0))
                         {
                             sprite = state->game_skin == SKIN_DEFAULT ? BODY_BOTTOMRIGHT : RARE_BODY_BOTTOMRIGHT;
-                            snake_quad.x = snake_x;
-                            snake_quad.y = snake_y;
+                            snake_quad.x = snake_pos.x;
+                            snake_quad.y = snake_pos.y;
                         }
 
                     }
@@ -1328,6 +1319,12 @@ v2 direction_enum_vector(DIRECTION dir)
     if (dir == DIR_NONE) return (v2){0, 0};
 
     return (v2){0, 0};
+}
+
+// Convierte la posicion en el grid del juego a una coordenada en pixeles de la pantalla
+inline v2 game_to_screen_pos(v2 game_pos, Game_state *state) 
+{
+    return (v2) { game_pos.x * state->cell_size + state->screen_rect.x, game_pos.y * state->cell_size + state->screen_rect.y};
 }
 
 // TODO: Implementar esto bien...

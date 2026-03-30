@@ -208,6 +208,8 @@ void change_level(Game_state *state, GAME_LEVEL level);
 
 bool is_over(Rect rect, int32_t x, int32_t y);
 
+inline v2 game_to_screen_pos(v2 game_pos, Game_state *state);
+
 void add_input(Game_state* state, DIRECTION dir);
 DIRECTION get_input(Game_state* state);
 
