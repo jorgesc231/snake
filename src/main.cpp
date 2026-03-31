@@ -856,10 +856,14 @@ void render_game(Engine *engine, Game_state *state)
             int old_snake_y = state->snake_old[i].position.y * state->cell_size + state->screen_rect.y;
     
             if (prueba_time < state->time_step) {  
-                prueba_x = lerp(old_snake_x, time_between, snake_pos.x);
-                prueba_y = lerp(old_snake_y, time_between, snake_pos.y);
-                shrinking_size = lerp(state->cell_size, time_between, 0);
-                expanding_size = lerp(0.0f, time_between, state->cell_size);
+                // C++ corta los decimales (trunca).
+                // Si la cabeza de la serpiente está en la posición 31.99 y el cuerpo en la 0.0, al convertirlos a int, 
+                // la cabeza se dibuja en el píxel 31 y el cuerpo en el 0. Tu tamaño es de 32, así que el cuerpo llega del 0 al 31. 
+                // Como la cabeza empieza en el 31, tienes un espacio vacío de 1 o 2 píxeles dependiendo de hacia dónde te muevas.
+                prueba_x = round(lerp(old_snake_x, time_between, snake_pos.x));
+                prueba_y = round(lerp(old_snake_y, time_between, snake_pos.y));
+                shrinking_size = round(lerp(state->cell_size, time_between, 0.0f));
+                expanding_size = round(lerp(0.0f, time_between, state->cell_size));
             } else {
                 prueba_x = snake_pos.x;
                 prueba_y = snake_pos.y;
@@ -1142,7 +1146,7 @@ void render_game(Engine *engine, Game_state *state)
 
                                 if (state->snake[i].direction.x == 1)
                                 {
-                                    snake_quad.x = state->snake[i].position.x * state->cell_size + state->screen_rect.x;
+                                    snake_quad.x = state->snake[i].position.x * state->cell_size + state->screen_rect.x; 
                                 }
 
                                 if (state->lerp) snake_quad.width = expanding_size;
