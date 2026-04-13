@@ -46,6 +46,7 @@ enum GAME_STATUS {
     PLAY,
     PAUSED,
     LOST,
+    LOST_ANIM
 };
 
 enum DIFFICULTY {
@@ -162,8 +163,6 @@ struct Game_state {
 
     float time = 0;
     float time_step = DEFAULT_NORMAL_TIMESTEP;
-    float time_out = 0.6;
-    int32_t time_out_completed = false;
 
     Snake snake_old[MAX_SNAKE_LENGTH] = {0};
     Snake snake[MAX_SNAKE_LENGTH] = {0};
@@ -171,6 +170,7 @@ struct Game_state {
 
     int32_t cell_size = DEFAULT_CELL_SIZE;
     int32_t rows, columns;
+    int32_t body_collision_id;
 
     v2 food_pos = {10, 7};
     int32_t food_active = false;

@@ -52,7 +52,14 @@ int main(int argc, char* args[])
     return EXIT_SUCCESS;
 }
 
-float prueba_time = 0.0f;
+// Variables para el impacto
+float impacto_time = 0.0f;
+float impacto_duracion = 0.250f; // segundos de animacion de choque
+
+// Variables para el screen shake 
+float shake_time = 0.0f;
+float shake_intensidad = 0.0f; // cuantos pixeles se mueve
+v2 offsetShake = {0, 0};
 
 void main_loop()
 {    
@@ -507,8 +514,8 @@ void set_game_state(Game_state *state)
 {
     state->score = 0;
     state->status = INIT;
-    state->time_out_completed = false;
     state->accept_input = false;
+    state->body_collision_id = -1;
 
     switch (state->difficulty)
     {
@@ -555,28 +562,53 @@ void set_game_state(Game_state *state)
 }
 
 void update_game (Game_state *state, float elapsed_time) {
-
-    state->time += elapsed_time;
-    
-    if (state->status != PAUSED && state->status != LOST)
+ 
+    if (state->status != PAUSED && state->status != LOST && state->status != LOST_ANIM && state->status != INIT)
     {
-        prueba_time += elapsed_time;
+        state->time += elapsed_time;
+    }
+
+    if (state->status == LOST_ANIM)
+    {
+        impacto_time += elapsed_time;
+
+        if (impacto_time >= impacto_duracion)
+        {
+            state->status = LOST;
+            state->show_status_screen = true;
+            impacto_time = 0;
+        }
+
+        // Implementacion Game Over
+        if (state->game_over)
+        {
+            if (state->audio_enabled)   Mix_PlayChannel(CH_GAME_OVER, state->sounds[SND_SNAKE_DIE], 0);
+            state->game_over = false;
+            state->show_status_screen = false;
+            //state->time = 0;
+
+            impacto_time = 0.0f;
+
+            shake_time = 0.250f;
+            shake_intensidad = 5.0f;
+        }
     }
     
-    SDL_LogDebug(CATEGORY_GAME_SNAKE, "time = %f - elapsed_time = %f", prueba_time, elapsed_time);
+    //SDL_LogDebug(CATEGORY_GAME_SNAKE, "time = %f - elapsed_time = %f", state->time, elapsed_time);
 
     // Actualizacion de estado del juego
     // NOTA: Importante el >= para que no parpadeen cosas
     if (state->time >= state->time_step && state->status == PLAY)
     {
         update_snake(state);
-        state->time = 0;
+        //if (state->status != LOST && state->status != LOST_ANIM) state->time = 0;
 
         // IMPORTANTE: Le restamos los 150ms al temporizador en lugar de igualarlo a 0.
         // Esto evita que el juego se ralentice si un frame dura un poco más de lo normal.
-        //prueba_time -= state->time_step;
-        prueba_time = 0;
+        //state->time-= state->time_step;
     }
+
+    if (state->time >= state->time_step ) state->time = 0;
 
     // TODO: Manejar el caso en el que el mapa este totalmente ocupado por la serpiente y
     // no quede espacio libre para colocar la comida, por ahora probablemente crash...o ciclo infinito
@@ -602,24 +634,6 @@ void update_game (Game_state *state, float elapsed_time) {
             }
         }
     }
-
-    if (state->status == LOST)
-    {
-        if (state->game_over)
-        {
-            if (state->audio_enabled)   Mix_PlayChannel(CH_GAME_OVER, state->sounds[SND_SNAKE_DIE], 0);
-            state->game_over = false;
-            state->show_status_screen = false;
-            state->time = 0;
-        }
-
-        // Delay after lose, temporal implementation...
-        if (state->time > state->time_out && !state->time_out_completed)
-        {
-            state->show_status_screen = true;
-            state->time_out_completed = true;
-        }
-    }
 }
 
 
@@ -632,34 +646,18 @@ void update_snake(Game_state *state)
 
     switch(get_input(state))
     {
-        case DIR_UP:
-        {
-            state->snake[0].direction = (v2){0, -1};
-        } break;
-
-        case DIR_DOWN:
-        {
-            state->snake[0].direction = (v2){0, 1};
-        } break;
-
-        case DIR_RIGHT:
-        {
-            state->snake[0].direction = (v2){1, 0};
-        } break;
-
-        case DIR_LEFT:
-        {
-            state->snake[0].direction = (v2){-1, 0};
-        } break;
-
+        case DIR_UP: state->snake[0].direction = (v2){0, -1}; break;
+        case DIR_DOWN: state->snake[0].direction = (v2){0, 1}; break;
+        case DIR_RIGHT: state->snake[0].direction = (v2){1, 0}; break;
+        case DIR_LEFT: state->snake[0].direction = (v2){-1, 0}; break;
         case DIR_NONE:
-        default:
-        {
-
-        } break;
+        default: break;
     }
 
-    v2 future_pos = {state->snake[0].position.x + state->snake[0].direction.x, state->snake[0].position.y + state->snake[0].direction.y};
+    v2 future_pos = { 
+        .x = state->snake[0].position.x + state->snake[0].direction.x, 
+        .y = state->snake[0].position.y + state->snake[0].direction.y
+    };
 
     // Food Collision
     if ((future_pos.x == state->food_pos.x && future_pos.y == state->food_pos.y))
@@ -694,16 +692,27 @@ void update_snake(Game_state *state)
         if (future_pos.x == state->snake[i].position.x && future_pos.y == state->snake[i].position.y
                 && i != state->tail_counter - 1)
         {
-                state->status = LOST;
+                state->status = LOST_ANIM;
                 state->accept_input = false;
                 state->game_over = true;
                 state->snake[0].direction = old_dir;
+                state->body_collision_id = i;
+                //SDL_LogDebug(CATEGORY_GAME_SNAKE, "Collision with segment: %d\n", i);
+
+                state->snake_old[0].position = state->snake[0].position;
+                
+                for (int i = state->tail_counter - 1; i > 0; i--) {
+
+                    state->snake_old[i].position = state->snake[i].position;
+                    state->snake_old[i].direction = state->snake[i].direction;
+                }
+
                 return;
         }
     }
 
     // Head with map limits collisions
-    if (future_pos.x >= 0 && future_pos.x <= state->columns - 1 && future_pos.y >= 0 && future_pos.y <= state->rows - 1)
+    if (future_pos.x > -1 && future_pos.x < state->columns && future_pos.y > -1 && future_pos.y <= state->rows - 1)
     {
         for (int i = state->tail_counter - 1; i > 0; i--) {
 
@@ -721,10 +730,18 @@ void update_snake(Game_state *state)
         state->snake[0].position.y += state->snake[0].direction.y;
 
     } else {
-        state->status = LOST;
+        state->status = LOST_ANIM;
         state->accept_input = false;
         state->game_over = true;
         state->snake[0].direction = old_dir;
+
+        state->snake_old[0].position = state->snake[0].position;
+        
+        for (int i = state->tail_counter - 1; i > 0; i--) {
+
+            state->snake_old[i].position = state->snake[i].position;
+            state->snake_old[i].direction = state->snake[i].direction;
+        }
         return;
     }
 }
@@ -736,7 +753,7 @@ void update_snake(Game_state *state)
 
 // Primero toma el mayor entre el valor y el suelo (0.0)
 // Luego toma el menor entre el resultado y el techo (1.0)
-float Clamp(float valor, float minimo, float maximo)  {
+float clamp(float valor, float minimo, float maximo)  {
     return Max(minimo, Min(valor, maximo));
 }
 
@@ -838,10 +855,11 @@ void render_game(Engine *engine, Game_state *state)
     int shrinking_size = 0;
     int expanding_size = 0;
 
-    float time_between = prueba_time / state->time_step;
-
     // Limitamos time_between a 1.0 para que no se pase del objetivo
-    time_between = Min(time_between, 1.0f);
+    float time_between = SDL_clamp(state->time / state->time_step, 0.0f, 1.0f);
+    //time_between = Min(time_between, 1.0f);
+
+    float t = SDL_clamp(impacto_time / (impacto_duracion), 0.0f, 1.0f);
 
     // Draw the Snake
     for (int32_t i = state->tail_counter - 1; i >= 0; i--)
@@ -855,7 +873,7 @@ void render_game(Engine *engine, Game_state *state)
             int old_snake_x = state->snake_old[i].position.x * state->cell_size + state->screen_rect.x;
             int old_snake_y = state->snake_old[i].position.y * state->cell_size + state->screen_rect.y;
     
-            if (prueba_time < state->time_step) {  
+            if (state->time <= state->time_step) {  
                 // C++ corta los decimales (trunca).
                 // Si la cabeza de la serpiente está en la posición 31.99 y el cuerpo en la 0.0, al convertirlos a int, 
                 // la cabeza se dibuja en el píxel 31 y el cuerpo en el 0. Tu tamaño es de 32, así que el cuerpo llega del 0 al 31. 
@@ -864,21 +882,21 @@ void render_game(Engine *engine, Game_state *state)
                 prueba_y = round(lerp(old_snake_y, time_between, snake_pos.y));
                 shrinking_size = round(lerp(state->cell_size, time_between, 0.0f));
                 expanding_size = round(lerp(0.0f, time_between, state->cell_size));
+                if (state->status == LOST || state->status == LOST_ANIM) expanding_size = state->cell_size;
+
             } else {
                 prueba_x = snake_pos.x;
                 prueba_y = snake_pos.y;
             }
         
     
-           #if 0
-            if (i == 0) {
-                SDL_LogDebug(CATEGORY_GAME_SNAKE, "LERP: old_x = %d - target_x = %d - lerp_x = %f", old_snake_x, snake_pos.x, prueba_x);
-                SDL_LogDebug(CATEGORY_GAME_SNAKE, "TIME: time_step = %f - elapsed_time = %f", state->time_step, prueba_time);
-                SDL_LogDebug(CATEGORY_GAME_SNAKE, "TIME: time between = %f", time_between);
-            }
+            #if 0
+                //SDL_LogDebug(CATEGORY_GAME_SNAKE, "LERP: old_x = %d - target_x = %d - lerp_x = %f", old_snake_x, snake_pos.x, prueba_x);
+                SDL_LogDebug(CATEGORY_GAME_SNAKE, "TIME: time = %f - time between = %f - t = %f", state->time, time_between, t);
+                SDL_LogDebug(CATEGORY_GAME_SNAKE, "expanding size = %d - %d", expanding_size, shrinking_size);
             #endif
          
-            snake_quad = (Quad) {prueba_x, prueba_y, state->cell_size, state->cell_size};
+            snake_quad = (Quad) {(int)prueba_x, (int)prueba_y, state->cell_size, state->cell_size};
         } else {
             snake_quad = (Quad) {snake_pos.x, snake_pos.y, state->cell_size, state->cell_size};
         }
@@ -1048,7 +1066,6 @@ void render_game(Engine *engine, Game_state *state)
 
                             // Dibuja la cola cuando la serpiente viene recto
 
-                            #if 1
                             // Dibuja la cola en horizontal hacia la izquierda
                             if (state->snake[i].direction.x == 1 && state->snake[i].direction.y == 0)
                             {
@@ -1060,12 +1077,12 @@ void render_game(Engine *engine, Game_state *state)
                                     relleno.width = shrinking_size;
                                 }
 
-                                create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                if (state->status != LOST_ANIM && state->status != LOST) {
+                                    create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                }
                                 
                             }
-                            #endif
 
-                            #if 1
                             // Dibuja la cola en horizontal hacia la derecha
                             if (state->snake[i].direction.x == -1 && state->snake[i].direction.y == 0)
                             {
@@ -1078,11 +1095,11 @@ void render_game(Engine *engine, Game_state *state)
                                     relleno.x = state->snake[i - 1].position.x * state->cell_size + state->screen_rect.x + state->cell_size;
                                 }
 
-                                create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                if (state->status != LOST_ANIM && state->status != LOST) {
+                                    create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                }
                             }
-                            #endif
 
-                            #if 1
                             // Dibuja la cola en vertical hacia arriba
                             if (state->snake[i].direction.x == 0 && state->snake[i].direction.y == 1)
                             {
@@ -1094,11 +1111,12 @@ void render_game(Engine *engine, Game_state *state)
                                     relleno.height = shrinking_size;
                                 }
 
-                                create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                if (state->status != LOST_ANIM && state->status != LOST) {
+                                    create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                }
+                                
                             }
-                            #endif
 
-                            #if 1
                             // Dibuja la cola en vertical hacia abajo
                             if (state->snake[i].direction.x == 0 && state->snake[i].direction.y == -1)
                             {
@@ -1111,9 +1129,11 @@ void render_game(Engine *engine, Game_state *state)
                                     relleno.y = state->snake[i - 1].position.y * state->cell_size + state->screen_rect.y + state->cell_size;
                                 }
 
-                                create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                if (state->status != LOST_ANIM && state->status != LOST) {
+                                    create_quad(&engine->main_batch, relleno, relleno_sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                }
+
                             }
-                            #endif
                         }
                     }
                     else  // Cuerpo
@@ -1130,7 +1150,7 @@ void render_game(Engine *engine, Game_state *state)
                                     snake_quad.y = state->snake[i].position.y * state->cell_size + state->screen_rect.y;
                                 } 
 
-                                if (state->lerp) snake_quad.height = expanding_size;                            
+                                if (state->lerp) snake_quad.height = expanding_size;
                             } else {
                                 snake_quad.x = snake_pos.x;
                                 snake_quad.y = snake_pos.y;
@@ -1149,7 +1169,10 @@ void render_game(Engine *engine, Game_state *state)
                                     snake_quad.x = state->snake[i].position.x * state->cell_size + state->screen_rect.x; 
                                 }
 
-                                if (state->lerp) snake_quad.width = expanding_size;
+                                if (state->lerp) 
+                                {
+                                    snake_quad.width = expanding_size;
+                                }
                             }
                             else {
                                 snake_quad.x = snake_pos.x;
@@ -1219,7 +1242,276 @@ void render_game(Engine *engine, Game_state *state)
                     }
                 }
 
-                create_quad(&engine->main_batch, snake_quad, sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                // Animacion de la cabeza cuando choca
+                // --- Usamos lerp para deformar la cabeza ---
+                // En un choque contra pared vertical (w decrece, h crece)
+
+                float factor_aplastamiento = 0.1f;
+                float factor_expansion = 1.95f;
+
+                if (state->status == LOST_ANIM) 
+                {
+                    // Choca contra pared vertical o parte del cuerpo en vertical
+                    if ((state->snake[0].position.x >= state->columns - 1 && state->snake[0].direction.x == 1) || (state->snake[0].position.x <= 0 && state->snake[0].direction.x == -1) || (state->body_collision_id != -1 && state->snake[0].position.y == state->snake[state->body_collision_id].position.y))
+                    //if (state->snake[0].direction.x == -1 || state->snake[0].direction.x == 1)
+                    {
+                        // Anima la cabeza
+                        if (i == 0) {
+                            if (impacto_time <= impacto_duracion / 2) {
+                                if (state->snake[1].position.x == 0 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x + 1)) {
+                                    sprite = HEAD_LEFT;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.y == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                if (state->snake[1].position.x == state->columns - 1 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x - 1)) {
+                                    sprite = HEAD_RIGHT;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.y == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                 if (state->snake[0].position.x >= state->columns - 1 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x - 1)) {
+                                    snake_quad.x = round(lerp(snake_pos.x, t * 2, snake_pos.x + state->cell_size * (1.0f - factor_aplastamiento)));
+                                }
+
+                                snake_quad.width = round(lerp(state->cell_size, t * 2, state->cell_size * factor_aplastamiento));
+                                //SDL_LogDebug(CATEGORY_GAME_SNAKE, "width = %d - t = %f - %f", snake_quad.width, t * 2, state->cell_size * factor_aplastamiento);
+                                snake_quad.height = round(lerp(state->cell_size, t * 2, state->cell_size * factor_expansion));
+                                snake_quad.y = round(lerp(snake_pos.y, t * 2, snake_pos.y + state->cell_size / 2 - snake_quad.height / 2));
+                                //snake_quad.y = round(lerp(snake_pos.y, t, snake_pos.y + state->cell_size / 2 - state->cell_size * 1.5 / 2));
+                            } else {
+
+                                t -= 0.5f;
+
+                                if (state->snake[1].position.x == 0 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x + 1)) {
+                                    sprite = HEAD_LEFT;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.y == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                if (state->snake[1].position.x == state->columns - 1 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x - 1)) {
+                                    sprite = HEAD_RIGHT;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.y == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                if (state->snake[0].position.x >= state->columns - 1 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x - 1)) {
+                                    snake_quad.x = round(lerp(snake_pos.x + state->cell_size * (1.0f - factor_aplastamiento), t * 2, snake_pos.x));
+                                }
+
+                                snake_quad.width = round(lerp(state->cell_size * factor_aplastamiento, t * 2, state->cell_size));
+                                snake_quad.height = round(lerp(state->cell_size * factor_expansion, t * 2, state->cell_size));
+                                snake_quad.y = round(lerp(snake_pos.y + state->cell_size / 2 - snake_quad.height / 2, t * 2, snake_pos.y));
+
+                                //SDL_LogDebug(CATEGORY_GAME_SNAKE, "width = %d - t = %f - %f", snake_quad.width, t, state->cell_size * factor_aplastamiento);
+                            }
+
+                            
+                            if (state->snake[0].direction.x == -1 || state->snake[0].direction.x == 1) {
+                                Quad prueba = snake_quad;
+                                prueba.x = snake_quad.x;
+                                prueba.y = snake_pos.y;
+
+                                prueba.width = snake_quad.width;
+                                prueba.height = state->cell_size;
+
+                                Quad prueba2 = prueba;
+
+                                if (state->snake[0].direction.x == 1) {
+                                    prueba.x -= snake_quad.width;
+                                    prueba2.x -= state->cell_size;
+                                    prueba2.width = state->cell_size;
+                                } else {
+                                    prueba.x += snake_quad.width;
+                                    prueba2.x += snake_quad.width;
+                                    prueba2.width = state->cell_size;
+                                }
+
+                                create_quad(&engine->main_batch, prueba2, BODY_HORIZONTAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                create_quad(&engine->main_batch, prueba, BODY_HORIZONTAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                            }  
+                        } 
+                        // Anima el resto del cuerpo
+                        else {
+                            v2 next_pos = (v2) {
+                                .x = snake_pos.x + state->snake[i].direction.x * state->cell_size, 
+                                .y = snake_pos.y + state->snake[i].direction.y * state->cell_size
+                            };
+
+                            if (i == state->tail_counter - 1)
+                            {
+                                float t2 = t;
+                                int offset = state->snake[state->tail_counter - 1].direction.x == -1 ? 10 : -10;
+
+                                if (impacto_time <= impacto_duracion / 2)
+                                {
+                                    snake_quad.x = round(lerp(snake_pos.x, t2 * 1.0f, next_pos.x));
+                                    snake_quad.y = round(lerp(snake_pos.y, t2 * 1.0f, next_pos.y));
+                                    //SDL_LogDebug(CATEGORY_GAME_SNAKE, "cola = %d - %d", snake_quad.x, next_pos.x);
+                                } 
+                                else {
+                                    //t2 -= 0.5f;
+                                    snake_quad.x = round(lerp(next_pos.x, t2 * 1.0f, snake_pos.x));
+                                    snake_quad.y = round(lerp(next_pos.y, t2 * 1.0f, snake_pos.y));
+                                    //SDL_LogDebug(CATEGORY_GAME_SNAKE, "cola = %d - %d", snake_quad.x, next_pos.x);
+                                }
+                            }
+                        }
+                    } 
+                    // Choca contra pared horizontal                   
+                    if ((state->snake[0].position.y >= state->rows - 1 && state->snake[0].direction.y == 1) || (state->snake[0].position.y <= 0 && state->snake[0].direction.y == -1) || (state->body_collision_id != -1 && state->snake[0].position.x == state->snake[state->body_collision_id].position.x))
+                    //if (state->snake[0].direction.y == -1 || state->snake[0].direction.y == 1)
+                    {
+                        if (i == 0) {
+                            if (impacto_time <= impacto_duracion / 2) {
+
+                                if (state->snake[1].position.y == 0 || (state->body_collision_id != -1 && state->snake[1].position.y == state->snake[state->body_collision_id].position.y + 1)) {
+                                    sprite = HEAD_UP;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.x == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                if (state->snake[1].position.y == state->rows - 1 || (state->body_collision_id != -1 && state->snake[1].position.y == state->snake[state->body_collision_id].position.y - 1)) {
+                                    sprite = HEAD_DOWN;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.x == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                if (state->snake[0].position.y >= state->rows - 1 || (state->body_collision_id != -1 && state->snake[1].position.y == state->snake[state->body_collision_id].position.y - 1)) {
+                                    snake_quad.y = round(lerp(snake_pos.y, t * 2.0f, snake_pos.y + state->cell_size * (1.0f - factor_aplastamiento)));
+                                }
+
+                                snake_quad.width = round(lerp(state->cell_size, t * 2.0f, state->cell_size * factor_expansion));
+                                snake_quad.height = round(lerp(state->cell_size, t * 2.0f, state->cell_size * factor_aplastamiento));
+                                snake_quad.x = round(lerp(snake_pos.x, t * 2.0f, snake_pos.x + state->cell_size / 2 - snake_quad.width / 2));
+                            } else {
+
+                                t -= 0.5f;
+
+                                if (state->snake[1].position.y == 0 || (state->body_collision_id != -1 && state->snake[1].position.y == state->snake[state->body_collision_id].position.y + 1)) {
+                                    sprite = HEAD_UP;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.x == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_TOPLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                if (state->snake[1].position.y == state->rows - 1 || (state->body_collision_id != -1 && state->snake[1].position.y == state->snake[state->body_collision_id].position.y - 1)) {
+                                    sprite = HEAD_DOWN;
+                                    factor_aplastamiento = 0.1f;
+                                    factor_expansion = 1.95;
+
+                                    if (state->snake[0].direction.x == -1) {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMRIGHT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                    } else {
+                                        create_quad(&engine->main_batch, snake_quad, BODY_BOTTOMLEFT, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));                                        
+                                    }
+                                }
+
+                                if (state->snake[0].position.y >= state->rows - 1 || (state->body_collision_id != -1 && state->snake[1].position.y == state->snake[state->body_collision_id].position.y - 1)) {
+                                    snake_quad.y = round(lerp(snake_pos.y + state->cell_size * (1.0f - factor_aplastamiento), t * 2.0f, snake_pos.y));
+                                }
+
+                                snake_quad.width = round(lerp(state->cell_size * factor_expansion, t * 2.0f, state->cell_size));
+                                snake_quad.height = round(lerp(state->cell_size * factor_aplastamiento, t * 2.0f, state->cell_size));
+                                snake_quad.x = round(lerp(snake_pos.x + state->cell_size / 2 - snake_quad.width / 2, t * 2.0f, snake_pos.x));
+                            }
+
+                            if (state->snake[0].direction.y == -1 || state->snake[0].direction.y == 1) {
+                                Quad prueba = snake_quad;
+                                prueba.y = snake_quad.y;
+                                prueba.x = snake_pos.x;
+
+                                prueba.height = snake_quad.height;
+                                prueba.width = state->cell_size;
+
+                                Quad prueba2 = prueba;
+
+                                if (state->snake[0].direction.y == 1) {
+                                    prueba.y -= snake_quad.height;
+                                    prueba2.y -= state->cell_size;
+                                    prueba2.height = state->cell_size;
+                                } else {
+                                    prueba.y += snake_quad.height;
+                                    prueba2.y += snake_quad.height;
+                                    prueba2.height = state->cell_size;
+                                }
+
+                                create_quad(&engine->main_batch, prueba2, BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                create_quad(&engine->main_batch, prueba, BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                            }
+                        } 
+                        // Anima el resto del cuerpo
+                        else {
+                            v2 next_pos = (v2) {
+                                .x = snake_pos.x + state->snake[i].direction.x * state->cell_size, 
+                                .y = snake_pos.y + state->snake[i].direction.y * state->cell_size
+                            };
+
+                            if (i == state->tail_counter - 1) 
+                            {
+                                float t2 = t;
+                                int offset = state->snake[state->tail_counter - 1].direction.y == -1 ? 10 : -10;
+
+                                if (impacto_time <= impacto_duracion / 2)
+                                {
+                                    snake_quad.x = round(lerp(snake_pos.x, t2 * 1.0f, next_pos.x));
+                                    snake_quad.y = round(lerp(snake_pos.y, t2 * 1.0f, next_pos.y));
+                                } 
+                                else {
+                                    //t2 -= 0.5f;
+                                    snake_quad.x = round(lerp(next_pos.x, t2 * 1.0f, snake_pos.x));
+                                    snake_quad.y = round(lerp(next_pos.y, t2 * 1.0f, snake_pos.y));
+                                }
+                            }
+                        }
+                    }
+
+                    create_quad(&engine->main_batch, snake_quad, sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+                } else {
+                    create_quad(&engine->main_batch, snake_quad, sprite, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                }
             }
     }
 
@@ -1328,7 +1620,7 @@ v2 direction_enum_vector(DIRECTION dir)
 // Convierte la posicion en el grid del juego a una coordenada en pixeles de la pantalla
 inline v2 game_to_screen_pos(v2 game_pos, Game_state *state) 
 {
-    return (v2) { game_pos.x * state->cell_size + state->screen_rect.x, game_pos.y * state->cell_size + state->screen_rect.y};
+    return (v2){ game_pos.x * state->cell_size + state->screen_rect.x, game_pos.y * state->cell_size + state->screen_rect.y};
 }
 
 // TODO: Implementar esto bien...

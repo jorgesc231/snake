@@ -1219,19 +1219,20 @@ void draw_debug_window(Engine *engine, Game_state *state)
 
     static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_RowBg;
 
-    if (ImGui::BeginTable("body_table", 4, flags))
+    if (ImGui::BeginTable("body_table", 5, flags))
     {
         // Submit columns name with TableSetupColumn() and call TableHeadersRow() to create a row with a header in each column.
         ImGui::TableSetupColumn("ID");
         ImGui::TableSetupColumn("Type");
         ImGui::TableSetupColumn("Position");
         ImGui::TableSetupColumn("Direction");
+        ImGui::TableSetupColumn("Screen Pos");
         ImGui::TableHeadersRow();
 
         for (int row = 0; row < state->tail_counter; row++)
         {
             ImGui::TableNextRow();
-            for (int column = 0; column < 4; column++)
+            for (int column = 0; column < 5; column++)
             {
                 ImGui::TableSetColumnIndex(column);
                 //ImGui::Text("Hello %d,%d", column, row);
@@ -1239,7 +1240,8 @@ void draw_debug_window(Engine *engine, Game_state *state)
                 switch(column) {
                     case 0:
                     {
-                        ImGui::Text("%d", row);
+                        if (state->body_collision_id == row) ImGui::Text("%d *", row);
+                        else ImGui::Text("%d", row);
                     } break;
 
                     case 1:
@@ -1258,6 +1260,16 @@ void draw_debug_window(Engine *engine, Game_state *state)
                     case 3:
                     {
                         ImGui::Text("(%d, %d)", state->snake[row].direction.x, state->snake[row].direction.y);
+                    } break;
+
+                    case 4:
+                    {
+                        v2 snake_pos = (v2) {
+                            .x = state->snake[row].position.x * state->cell_size + state->screen_rect.x,
+                            .y = state->snake[row].position.y * state->cell_size + state->screen_rect.y
+                        };
+
+                        ImGui::Text("(%d, %d)", snake_pos.x, snake_pos.y);
                     } break;
                 }
             }
