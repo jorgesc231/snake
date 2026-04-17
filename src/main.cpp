@@ -54,7 +54,7 @@ int main(int argc, char* args[])
 
 // Variables para el impacto
 float impacto_time = 0.0f;
-float impacto_duracion = 0.250f; // segundos de animacion de choque
+float impacto_duracion = 0.350f; // segundos de animacion de choque
 
 // Variables para el screen shake 
 float shake_time = 0.0f;
@@ -1251,9 +1251,15 @@ void render_game(Engine *engine, Game_state *state)
 
                 if (state->status == LOST_ANIM) 
                 {
+                    v2 next_pos = (v2) {
+                        .x = (state->snake[i].position.x + state->snake[i].direction.x) * state->cell_size + state->screen_rect.x, 
+                        .y = (state->snake[i].position.y + state->snake[i].direction.y) * state->cell_size + state->screen_rect.y
+                    };
+
                     // Choca contra pared vertical o parte del cuerpo en vertical
-                    if ((state->snake[0].position.x >= state->columns - 1 && state->snake[0].direction.x == 1) || (state->snake[0].position.x <= 0 && state->snake[0].direction.x == -1) || (state->body_collision_id != -1 && state->snake[0].position.y == state->snake[state->body_collision_id].position.y))
-                    //if (state->snake[0].direction.x == -1 || state->snake[0].direction.x == 1)
+                    if ((state->snake[0].position.x >= state->columns - 1 && (state->input_dir == DIR_RIGHT || (state->snake[0].direction.x == 1 && state->input_dir != DIR_UP && state->input_dir != DIR_DOWN))) || 
+                        (state->snake[0].position.x <= 0 && (state->input_dir == DIR_LEFT || (state->snake[0].direction.x == -1 && state->input_dir != DIR_UP && state->input_dir != DIR_DOWN))) ||
+                        (state->body_collision_id != -1 && state->snake[0].position.y == state->snake[state->body_collision_id].position.y))
                     {
                         // Anima la cabeza
                         if (i == 0) {
@@ -1357,11 +1363,6 @@ void render_game(Engine *engine, Game_state *state)
                         } 
                         // Anima el resto del cuerpo
                         else {
-                            v2 next_pos = (v2) {
-                                .x = snake_pos.x + state->snake[i].direction.x * state->cell_size, 
-                                .y = snake_pos.y + state->snake[i].direction.y * state->cell_size
-                            };
-
                             if (i == state->tail_counter - 1)
                             {
                                 float t2 = t;
@@ -1383,8 +1384,9 @@ void render_game(Engine *engine, Game_state *state)
                         }
                     } 
                     // Choca contra pared horizontal                   
-                    if ((state->snake[0].position.y >= state->rows - 1 && state->snake[0].direction.y == 1) || (state->snake[0].position.y <= 0 && state->snake[0].direction.y == -1) || (state->body_collision_id != -1 && state->snake[0].position.x == state->snake[state->body_collision_id].position.x))
-                    //if (state->snake[0].direction.y == -1 || state->snake[0].direction.y == 1)
+                    if ((state->snake[0].position.y >= state->rows - 1 && (state->input_dir == DIR_DOWN || (state->snake[0].direction.y == 1 && state->input_dir != DIR_LEFT && state->input_dir != DIR_RIGHT))) || 
+                        (state->snake[0].position.y <= 0 && (state->input_dir == DIR_UP || (state->snake[0].direction.y == -1 && state->input_dir != DIR_LEFT && state->input_dir != DIR_RIGHT))) || 
+                        (state->body_collision_id != -1 && state->snake[0].position.x == state->snake[state->body_collision_id].position.x))
                     {
                         if (i == 0) {
                             if (impacto_time <= impacto_duracion / 2) {
@@ -1483,11 +1485,6 @@ void render_game(Engine *engine, Game_state *state)
                         } 
                         // Anima el resto del cuerpo
                         else {
-                            v2 next_pos = (v2) {
-                                .x = snake_pos.x + state->snake[i].direction.x * state->cell_size, 
-                                .y = snake_pos.y + state->snake[i].direction.y * state->cell_size
-                            };
-
                             if (i == state->tail_counter - 1) 
                             {
                                 float t2 = t;
