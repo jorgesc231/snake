@@ -1288,7 +1288,7 @@ void render_game(Engine *engine, Game_state *state)
                                     }
                                 }
 
-                                 if (state->snake[0].position.x >= state->columns - 1 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x - 1)) {
+                                if (state->snake[0].position.x >= state->columns - 1 || (state->body_collision_id != -1 && state->snake[1].position.x == state->snake[state->body_collision_id].position.x - 1)) {
                                     snake_quad.x = round(lerp(snake_pos.x, t * 2, snake_pos.x + state->cell_size * (1.0f - factor_aplastamiento)));
                                 }
 
@@ -1297,6 +1297,26 @@ void render_game(Engine *engine, Game_state *state)
                                 snake_quad.height = round(lerp(state->cell_size, t * 2, state->cell_size * factor_expansion));
                                 snake_quad.y = round(lerp(snake_pos.y, t * 2, snake_pos.y + state->cell_size / 2 - snake_quad.height / 2));
                                 //snake_quad.y = round(lerp(snake_pos.y, t, snake_pos.y + state->cell_size / 2 - state->cell_size * 1.5 / 2));
+
+                                if (state->snake[0].direction.x == -1 || state->snake[0].direction.x == 1) {
+                                    Quad prueba = snake_quad;
+                                    prueba.x = snake_quad.x;
+                                    prueba.y = snake_pos.y;
+
+                                    prueba.width = snake_quad.width;
+                                    prueba.height = state->cell_size;
+
+                                    if (state->snake[0].direction.x == 1) {
+                                        prueba.x -= round(lerp(0, t * 2, state->cell_size));
+                                        prueba.width = round(lerp(0, t * 2, state->cell_size));
+                                    } else {
+                                        prueba.x += snake_quad.width;
+                                        prueba.width = round(lerp(0, t * 2, state->cell_size));
+                                    }
+
+                                    create_quad(&engine->main_batch, prueba, BODY_HORIZONTAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                }
+
                             } else {
 
                                 t -= 0.5f;
@@ -1334,32 +1354,27 @@ void render_game(Engine *engine, Game_state *state)
                                 snake_quad.y = round(lerp(snake_pos.y + state->cell_size / 2 - snake_quad.height / 2, t * 2, snake_pos.y));
 
                                 //SDL_LogDebug(CATEGORY_GAME_SNAKE, "width = %d - t = %f - %f", snake_quad.width, t, state->cell_size * factor_aplastamiento);
+
+                                if (state->snake[0].direction.x == -1 || state->snake[0].direction.x == 1) {
+                                    Quad prueba = snake_quad;
+                                    prueba.x = snake_quad.x;
+                                    prueba.y = snake_pos.y;
+
+                                    prueba.width = snake_quad.width;
+                                    prueba.height = state->cell_size;
+
+                                    if (state->snake[0].direction.x == 1) {
+                                        prueba.x -= round(lerp(state->cell_size, t * 2, 0));
+                                        prueba.width = round(lerp(state->cell_size, t * 2, 0));
+                                    } else {
+                                        prueba.x += snake_quad.width;
+                                        prueba.width = round(lerp(state->cell_size, t * 2, 0));
+                                    }
+
+                                    create_quad(&engine->main_batch, prueba, BODY_HORIZONTAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                }  
                             }
 
-                            
-                            if (state->snake[0].direction.x == -1 || state->snake[0].direction.x == 1) {
-                                Quad prueba = snake_quad;
-                                prueba.x = snake_quad.x;
-                                prueba.y = snake_pos.y;
-
-                                prueba.width = snake_quad.width;
-                                prueba.height = state->cell_size;
-
-                                Quad prueba2 = prueba;
-
-                                if (state->snake[0].direction.x == 1) {
-                                    prueba.x -= snake_quad.width;
-                                    prueba2.x -= state->cell_size;
-                                    prueba2.width = state->cell_size;
-                                } else {
-                                    prueba.x += snake_quad.width;
-                                    prueba2.x += snake_quad.width;
-                                    prueba2.width = state->cell_size;
-                                }
-
-                                create_quad(&engine->main_batch, prueba2, BODY_HORIZONTAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                                create_quad(&engine->main_batch, prueba, BODY_HORIZONTAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                            }  
                         } 
                         // Anima el resto del cuerpo
                         else {
@@ -1422,6 +1437,27 @@ void render_game(Engine *engine, Game_state *state)
                                 snake_quad.width = round(lerp(state->cell_size, t * 2.0f, state->cell_size * factor_expansion));
                                 snake_quad.height = round(lerp(state->cell_size, t * 2.0f, state->cell_size * factor_aplastamiento));
                                 snake_quad.x = round(lerp(snake_pos.x, t * 2.0f, snake_pos.x + state->cell_size / 2 - snake_quad.width / 2));
+
+                                if (state->snake[0].direction.y == -1 || state->snake[0].direction.y == 1) {
+                                    Quad prueba = snake_quad;
+                                    prueba.y = snake_quad.y;
+                                    prueba.x = snake_pos.x;
+
+                                    prueba.height = snake_quad.height;
+                                    prueba.width = state->cell_size;
+
+                                    if (state->snake[0].direction.y == 1) {
+                                        prueba.y -= round(lerp(0, t * 2.0f, state->cell_size));
+                                        prueba.height = round(lerp(0, t * 2.0f, state->cell_size));
+                                    } else {
+                                        prueba.y += snake_quad.height;
+                                        prueba.height = round(lerp(0, t * 2.0f, state->cell_size));
+                                    }
+
+                                    create_quad(&engine->main_batch, prueba, BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                                }
+
+
                             } else {
 
                                 t -= 0.5f;
@@ -1457,30 +1493,25 @@ void render_game(Engine *engine, Game_state *state)
                                 snake_quad.width = round(lerp(state->cell_size * factor_expansion, t * 2.0f, state->cell_size));
                                 snake_quad.height = round(lerp(state->cell_size * factor_aplastamiento, t * 2.0f, state->cell_size));
                                 snake_quad.x = round(lerp(snake_pos.x + state->cell_size / 2 - snake_quad.width / 2, t * 2.0f, snake_pos.x));
-                            }
 
-                            if (state->snake[0].direction.y == -1 || state->snake[0].direction.y == 1) {
-                                Quad prueba = snake_quad;
-                                prueba.y = snake_quad.y;
-                                prueba.x = snake_pos.x;
+                                if (state->snake[0].direction.y == -1 || state->snake[0].direction.y == 1) {
+                                    Quad prueba = snake_quad;
+                                    prueba.y = snake_quad.y;
+                                    prueba.x = snake_pos.x;
 
-                                prueba.height = snake_quad.height;
-                                prueba.width = state->cell_size;
+                                    prueba.height = snake_quad.height;
+                                    prueba.width = state->cell_size;
 
-                                Quad prueba2 = prueba;
+                                    if (state->snake[0].direction.y == 1) {
+                                        prueba.y -= round(lerp(state->cell_size, t * 2.0f, 0));
+                                        prueba.height = round(lerp(state->cell_size, t * 2.0f, 0));
+                                    } else {
+                                        prueba.y += snake_quad.height;
+                                        prueba.height = round(lerp(state->cell_size, t * 2.0f, 0));
+                                    }
 
-                                if (state->snake[0].direction.y == 1) {
-                                    prueba.y -= snake_quad.height;
-                                    prueba2.y -= state->cell_size;
-                                    prueba2.height = state->cell_size;
-                                } else {
-                                    prueba.y += snake_quad.height;
-                                    prueba2.y += snake_quad.height;
-                                    prueba2.height = state->cell_size;
+                                    create_quad(&engine->main_batch, prueba, BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                                 }
-
-                                create_quad(&engine->main_batch, prueba2, BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                                create_quad(&engine->main_batch, prueba, BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                             }
                         } 
                         // Anima el resto del cuerpo
