@@ -322,7 +322,7 @@ void draw_gui(Engine *engine, Game_state *state) {
 
     draw_score(engine, state);
         
-    if (state->status != PLAY && state->show_status_screen) draw_status(engine, state);
+    if (state->show_status_screen) draw_status(engine, state);
         
 #if defined(NDEBUG)
     if (state->show_demo_window) ImGui::ShowDemoWindow((bool *)&state->show_demo_window);
@@ -485,7 +485,10 @@ void draw_score(Engine *engine, Game_state *state)
 			)
     		)
     {
-        if (state->accept_input) state->status = PAUSED;
+        if (state->accept_input) {
+            state->status = PAUSED;
+            state->show_status_screen = true;
+        }
     }
 
 
@@ -577,6 +580,7 @@ void draw_status(Engine *engine, Game_state *state) {
 
             state->status = PLAY;
             state->accept_input = true;
+            state->show_status_screen = false;
         }
 
         text_button_size = ImGui::CalcTextSize(get_text(state->selected_language, STR_BTN_OPTIONS));
@@ -1114,6 +1118,7 @@ void draw_debug_window(Engine *engine, Game_state *state)
 
         state->status = PLAY;
         state->accept_input = true;
+        state->show_status_screen = false;
     }
 
     ImGui::SameLine();
@@ -1121,6 +1126,8 @@ void draw_debug_window(Engine *engine, Game_state *state)
     if (ImGui::Button("PAUSE", ImVec2(80, 30)))
     {
         state->status = PAUSED;
+        state->accept_input = false;
+        state->show_status_screen = true;
     }
 
     ImGui::SameLine();
@@ -1128,6 +1135,8 @@ void draw_debug_window(Engine *engine, Game_state *state)
     if (ImGui::Button("LOST", ImVec2(80, 30)))
     {
         state->status = LOST;
+        state->accept_input = false;
+        state->show_status_screen = true;
     }
 
     ImGui::Separator();

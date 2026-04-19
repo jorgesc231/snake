@@ -135,14 +135,14 @@ struct Game_state {
 
 	int32_t game_over = false;
 	int32_t quit = false;
-	int32_t show_menu = false;
 
 	int32_t audio_loaded = false;
 	int32_t audio_enabled = true;
     
     int32_t animations = true;
-	int32_t show_status_screen = true;
 	int32_t accept_input = true;
+    int32_t show_status_screen = true;
+    int32_t show_menu = false;
 
     LANGUAGES selected_language = ENGLISH;
 
