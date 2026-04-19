@@ -1230,7 +1230,7 @@ void render_game(Engine *engine, Game_state *state)
                 float factor_aplastamiento = 0.1f;
                 float factor_expansion = 1.95f;
 
-                if (state->status == LOST_ANIM) 
+                if (state->status == LOST_ANIM && state->game_skin == SKIN_DEFAULT)
                 {
                     v2 next_pos = (v2) {
                         .x = (state->snake[i].position.x + state->snake[i].direction.x) * state->cell_size + state->screen_rect.x, 
