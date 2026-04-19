@@ -1203,8 +1203,8 @@ void render_game(Engine *engine, Game_state *state)
                 };
 
                 // Choca contra pared vertical o parte del cuerpo en vertical
-                if ((state->snake[0].position.x >= state->columns - 1 && (state->input_dir == DIR_RIGHT || (state->snake[0].direction.x == 1 && state->input_dir != DIR_UP && state->input_dir != DIR_DOWN))) || 
-                    (state->snake[0].position.x <= 0 && (state->input_dir == DIR_LEFT || (state->snake[0].direction.x == -1 && state->input_dir != DIR_UP && state->input_dir != DIR_DOWN))) ||
+                if ((state->snake[0].position.x >= state->columns - 1 && (state->recent_dir == DIR_RIGHT || (state->snake[0].direction.x == 1 && state->recent_dir != DIR_UP && state->recent_dir != DIR_DOWN))) || 
+                    (state->snake[0].position.x <= 0 && (state->recent_dir == DIR_LEFT || (state->snake[0].direction.x == -1 && state->recent_dir != DIR_UP && state->recent_dir != DIR_DOWN))) ||
                     (state->body_collision_id != -1 && state->snake[0].position.y == state->snake[state->body_collision_id].position.y))
                 {
                     // Anima la cabeza
@@ -1336,8 +1336,8 @@ void render_game(Engine *engine, Game_state *state)
                     }
                 } 
                 // Choca contra pared horizontal                   
-                if ((state->snake[0].position.y >= state->rows - 1 && (state->input_dir == DIR_DOWN || (state->snake[0].direction.y == 1 && state->input_dir != DIR_LEFT && state->input_dir != DIR_RIGHT))) || 
-                    (state->snake[0].position.y <= 0 && (state->input_dir == DIR_UP || (state->snake[0].direction.y == -1 && state->input_dir != DIR_LEFT && state->input_dir != DIR_RIGHT))) || 
+                if ((state->snake[0].position.y >= state->rows - 1 && (state->recent_dir == DIR_DOWN || (state->snake[0].direction.y == 1 && state->recent_dir != DIR_LEFT && state->recent_dir != DIR_RIGHT))) || 
+                    (state->snake[0].position.y <= 0 && (state->recent_dir == DIR_UP || (state->snake[0].direction.y == -1 && state->recent_dir != DIR_LEFT && state->recent_dir != DIR_RIGHT))) || 
                     (state->body_collision_id != -1 && state->snake[0].position.x == state->snake[state->body_collision_id].position.x))
                 {
                     if (i == 0) {
@@ -1450,7 +1450,7 @@ void render_game(Engine *engine, Game_state *state)
                                 create_quad(&engine->main_batch, prueba, BODY_VERTICAL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                             }
                         }
-                    } 
+                    }
                     // Anima el resto del cuerpo
                     else {
                         if (i == state->tail_counter - 1) 
@@ -1591,7 +1591,10 @@ void add_input(Game_state* state, DIRECTION dir)
     DIRECTION last_dir = DIR_NONE;
 
     // TODO: @test iluminar los botones que se presionan
-    if (state->accept_input) state->input_dir = dir;
+    if (state->accept_input) {
+        state->input_dir = dir;
+        state->recent_dir = dir;
+    }
 
     if (state->direction_buffer[0] == DIR_NONE && state->direction_buffer[1] == DIR_NONE)
     {

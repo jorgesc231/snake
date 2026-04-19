@@ -154,6 +154,9 @@ struct Game_state {
     Triangle touch_input_triangles[4] = {};
     DIRECTION input_dir = DIR_NONE;
 
+    // Esto es para la animacion de game over, hay otra forma de hacerlo pero no quiero hacerla ahora
+    DIRECTION recent_dir = DIR_NONE;
+
     GAME_STATUS status = PAUSED;
     DIFFICULTY difficulty = DIFFICULTY_NORMAL;
     GAME_SKIN game_skin = SKIN_DEFAULT;
