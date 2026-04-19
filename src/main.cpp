@@ -869,7 +869,7 @@ void render_game(Engine *engine, Game_state *state)
         
         v2 snake_pos = game_to_screen_pos(state->snake[i].position, state);
 
-        if (state->lerp) {
+        if (state->animations) {
             int old_snake_x = state->snake_old[i].position.x * state->cell_size + state->screen_rect.x;
             int old_snake_y = state->snake_old[i].position.y * state->cell_size + state->screen_rect.y;
     
@@ -1134,7 +1134,7 @@ void render_game(Engine *engine, Game_state *state)
                                     snake_quad.y = state->snake[i].position.y * state->cell_size + state->screen_rect.y;
                                 } 
 
-                                if (state->lerp) snake_quad.height = expanding_size;
+                                if (state->animations) snake_quad.height = expanding_size;
                             } else {
                                 snake_quad.x = snake_pos.x;
                                 snake_quad.y = snake_pos.y;
@@ -1153,7 +1153,7 @@ void render_game(Engine *engine, Game_state *state)
                                     snake_quad.x = state->snake[i].position.x * state->cell_size + state->screen_rect.x; 
                                 }
 
-                                if (state->lerp) snake_quad.width = expanding_size;
+                                if (state->animations) snake_quad.width = expanding_size;
                             }
                             else {
                                 snake_quad.x = snake_pos.x;

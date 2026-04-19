@@ -731,9 +731,9 @@ void draw_status(Engine *engine, Game_state *state) {
 
 			if (engine->device_type == ENGINE_PHONE) ImGui::Spacing();
 
-            // TODO: Comprueba si estamos en la skin por defecto para activar lerp si no lo desactiva
-            if (state->game_skin == SKIN_DEFAULT) state->lerp = true;
-            else state->lerp = false; 
+            // TODO: Comprueba si estamos en la skin por defecto para activar las animaciones si no lo desactiva
+            if (state->game_skin == SKIN_DEFAULT) state->animations = true;
+            else state->animations = false; 
         }
 
         ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_LEVEL));
@@ -1138,7 +1138,7 @@ void draw_debug_window(Engine *engine, Game_state *state)
     ImGui::SameLine();
     ImGui::Checkbox("Status Screen", (bool *)&state->show_status_screen);
     ImGui::SameLine();
-    ImGui::Checkbox("Lerp", (bool *)&state->lerp);
+    ImGui::Checkbox("Animations", (bool *)&state->animations);
 
     ImGui::Separator();
 

@@ -140,7 +140,7 @@ struct Game_state {
 	int32_t audio_loaded = false;
 	int32_t audio_enabled = true;
     
-    int32_t lerp = true;
+    int32_t animations = true;
 	int32_t show_status_screen = true;
 	int32_t accept_input = true;
 
