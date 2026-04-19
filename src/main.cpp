@@ -498,6 +498,7 @@ void set_game_state(Game_state *state)
     state->status = INIT;
     state->accept_input = false;
     state->body_collision_id = -1;
+    state->recent_dir = DIR_NONE;
 
     switch (state->difficulty)
     {
