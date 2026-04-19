@@ -1411,7 +1411,7 @@ void render_game(Engine *engine, Game_state *state)
 
                                 if (state->snake[0].position.y >= state->rows - 1 || (state->body_collision_id != -1 && state->snake[1].position.y < state->snake[state->body_collision_id].position.y))
                                 {
-                                    snake_quad.y = round(lerp(snake_pos.y, t * 2.0f, snake_pos.y + state->cell_size * (1.0f - factor_aplastamiento) + 10));
+                                    snake_quad.y = round(lerp(snake_pos.y, t * 2.0f, snake_pos.y + state->cell_size * (1.0f - factor_aplastamiento)));
                                 }
 
                                 snake_quad.width = round(lerp(state->cell_size, t * 2.0f, state->cell_size * factor_expansion));
@@ -1468,7 +1468,7 @@ void render_game(Engine *engine, Game_state *state)
 
                                 if (state->snake[0].position.y >= state->rows - 1 || (state->body_collision_id != -1 && state->snake[1].position.y < state->snake[state->body_collision_id].position.y))
                                 {
-                                    snake_quad.y = round(lerp(snake_pos.y + state->cell_size * (1.0f - factor_aplastamiento) + 10, t * 2.0f, snake_pos.y));
+                                    snake_quad.y = round(lerp(snake_pos.y + state->cell_size * (1.0f - factor_aplastamiento), t * 2.0f, snake_pos.y));
                                 }
 
                                 snake_quad.width = round(lerp(state->cell_size * factor_expansion, t * 2.0f, state->cell_size));

@@ -543,6 +543,9 @@ int load_state_file(Engine *engine, const char *filename, Game_state *state)
     SDL_RWclose(file);
     file = NULL;
 
+    // If we load the default skin we activate the animations.
+    state->lerp = state->game_skin == SKIN_DEFAULT ? true : false;
+
     SDL_LogDebug(CATEGORY_ENGINE_SNAKE, "File Loaded: %s \n", absolute_path);
 
     return 1;
