@@ -174,6 +174,7 @@ uint32_t init_engine(Engine *engine)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigNavCursorVisibleAlways = true;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();

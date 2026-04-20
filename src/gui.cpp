@@ -11,6 +11,9 @@
 // ImGuiCond_FirstUseEver = if window has not data in .ini file
 // ImGuiCond_Once = once per session
 
+// When to reset options menu scroll
+int reset_scroll = 0;
+
 void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_height)
 {
     state->screen_rect = (Rect) {0, 0, screen_width, screen_height};
@@ -507,6 +510,8 @@ void draw_status(Engine *engine, Game_state *state) {
     //ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoInputs;
     ImGuiWindowFlags window_flags =  ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings;
     ImGui::SetNextWindowBgAlpha(0.5f); // Transparent background
+
+    io.ConfigNavCursorVisibleAlways = true;
     
     ImGui::Begin("Status", NULL, window_flags);
 
@@ -565,11 +570,6 @@ void draw_status(Engine *engine, Game_state *state) {
         text_button_size = ImVec2(text_button_size.x + frame_padding.x * 2, text_button_size.y + frame_padding.y * 2);
         ImGui::SetCursorScreenPos(ImVec2(ImGui::GetWindowWidth() * 0.5f - text_button_size.x * 0.5f, ImGui::GetWindowHeight() * 0.55f - text_button_size.y * 0.5f));
 
-        //ImGui::SetFocusID(ImGui::GetID(("Jugar")), ImGui::GetCurrentWindow());
-        // Highlight
-        //ImGuiContext& g = *ImGui::GetCurrentContext();
-        //g.NavDisableHighlight = false;
-
         if (ImGui::Button(get_text(state->selected_language, STR_BTN_PLAY)))
         {
             if (state->status == LOST)
@@ -583,6 +583,8 @@ void draw_status(Engine *engine, Game_state *state) {
             state->show_status_screen = false;
         }
 
+        ImGui::SetItemDefaultFocus();
+
         text_button_size = ImGui::CalcTextSize(get_text(state->selected_language, STR_BTN_OPTIONS));
         text_button_size = ImVec2(text_button_size.x + frame_padding.x * 2, text_button_size.y + frame_padding.y * 2);
         ImGui::SetCursorScreenPos(ImVec2(ImGui::GetWindowWidth() * 0.5f - text_button_size.x * 0.5f, ImGui::GetCursorPosY()));
@@ -590,6 +592,7 @@ void draw_status(Engine *engine, Game_state *state) {
         if (ImGui::Button(get_text(state->selected_language, STR_BTN_OPTIONS)))
         {
             state->show_menu = true;
+            reset_scroll = 1;
         }
 
         ImGui::PopStyleVar(3);
@@ -641,6 +644,8 @@ void draw_status(Engine *engine, Game_state *state) {
 
         ImVec2 options_window_size;
 
+        io.ConfigNavCursorVisibleAuto = true;
+
         // TODO: Deberia buscar otra forma...
         if (engine->device_type == ENGINE_PHONE)
         {
@@ -676,8 +681,14 @@ void draw_status(Engine *engine, Game_state *state) {
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 40));
         }
 
+        if (reset_scroll) {
+            ImGui::SetNextWindowFocus();
+            ImGui::SetNextWindowScroll(ImVec2(0.0f, 0.0f));
+            //reset_scroll = 0;
+        }
+
         // ImGuiWindowFlags_AlwaysVerticalScrollbar
-        ImGui::BeginChild("Options", options_window_size, ImGuiChildFlags_Border, ImGuiWindowFlags_NoSavedSettings);
+        ImGui::BeginChild("Options", options_window_size, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoSavedSettings);
 
         if (engine->device_type == ENGINE_PHONE && engine->DISP_HEIGHT > engine->DISP_WIDTH)
         {
@@ -700,7 +711,13 @@ void draw_status(Engine *engine, Game_state *state) {
             };
             int current_item = state->game_skin;
 
+            if (reset_scroll) {
+                ImGui::SetKeyboardFocusHere();
+                reset_scroll = 0;
+            }
+            
             ImGui::SeparatorText(get_text(state->selected_language, STR_CAT_SKIN));
+            ImGui::SetItemDefaultFocus();
 
             int text_sz = ImGui::CalcTextSize(("ABCDEFGHY")).x;
             int total_sz = spacing + text_sz + spacing + ImGui::GetFrameHeight() * 2;
@@ -910,7 +927,7 @@ void draw_status(Engine *engine, Game_state *state) {
         ImVec2 window_size = ImGui::GetWindowSize();
         ImVec2 window_pos = ImGui::GetWindowPos();
 
-        if (!is_over((Rect){(int)window_pos.x, (int)window_pos.y, (int)window_size.x, (int)window_size.y}, mouse_pos.x, mouse_pos.y))
+        if (ImGui::IsMouseClicked(0) && !is_over((Rect){(int)window_pos.x, (int)window_pos.y, (int)window_size.x, (int)window_size.y}, mouse_pos.x, mouse_pos.y))
         {
         	state->show_menu = false;
         }
