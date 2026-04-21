@@ -486,7 +486,7 @@ int load_state_file(Engine *engine, const char *filename, Game_state *state)
 
     // TODO: Temporal
     static char path_buffer[PATH_MAX];
-    snprintf(path_buffer, PATH_MAX, "%s/%s", &engine->assets.android_internal_storage_path, filename);
+    snprintf(path_buffer, PATH_MAX, "%s/%s", engine->assets.android_internal_storage_path, filename);
 
 #if defined(__ANDROID__)
     SDL_RWops *file = SDL_RWFromFile(path_buffer, "r");
@@ -560,7 +560,7 @@ bool write_state_file(Engine *engine, const char *filename, Game_state *state)
 
     // TODO: Temporal
     static char path_buffer[PATH_MAX];
-    snprintf(path_buffer, PATH_MAX, "%s/%s", &engine->assets.android_internal_storage_path, filename);
+    snprintf(path_buffer, PATH_MAX, "%s/%s", engine->assets.android_internal_storage_path, filename);
 
 #if defined(__ANDROID__)
     SDL_RWops *file = SDL_RWFromFile(path_buffer, "w");
