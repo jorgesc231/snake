@@ -59,8 +59,18 @@ float shake_time = 0.0f;
 float shake_intensidad = 0.0f; // cuantos pixeles se mueve
 v2 offsetShake = {0, 0};
 
+#ifndef NDEBUG
+static double ticks_to_ms() {
+    return 1000.0 / (double) SDL_GetPerformanceFrequency();
+}
+#endif
+
 void main_loop()
 {    
+    #ifndef NDEBUG
+    uint64_t t0 = SDL_GetPerformanceCounter();
+    #endif
+
     // calculates the elapsedTime in seconds since the last time this code was executed.
     uint64_t current_time = SDL_GetTicks64();
     float elapsed_time = (float)(current_time - engine.prev_time) / 1000.0f;
@@ -68,18 +78,73 @@ void main_loop()
     
     // Process Events
     process_events(&engine, &state);
+    #ifndef NDEBUG
+    uint64_t t1 = SDL_GetPerformanceCounter();
+    #endif
+
 
     update_game(&state, elapsed_time);
+    #ifndef NDEBUG
+    uint64_t t2 = SDL_GetPerformanceCounter();
+    #endif
 
     render_game(&engine, &state);
-        
+    #ifndef NDEBUG
+    uint64_t t3 = SDL_GetPerformanceCounter();
+    
     print_gles_errors();
+    #endif
 
     draw_gui(&engine, &state);
+    #ifndef NDEBUG
+    uint64_t t4 = SDL_GetPerformanceCounter();
+    #endif
 
     SDL_GL_SwapWindow(engine.window);
+    #ifndef NDEBUG
+    uint64_t t5 = SDL_GetPerformanceCounter(); 
+    #endif 
+
+    #ifndef NDEBUG
+    // --- stats, se imprimen cada 2 s ---
+    static double acc_cpu, acc_evt, acc_upd, acc_rnd, acc_gui, acc_swap;
+    static float  cpu_max;
+    static int    frames;
+    static uint64_t last_log = 0;
+
+    const double k = ticks_to_ms();
+    float cpu  = (float)((t4 - t0) * k); // antes del vsync
+    float evt  = (float)((t1 - t0) * k);
+    float upd  = (float)((t2 - t1) * k);
+    float rnd  = (float)((t3 - t2) * k);
+    float gui  = (float)((t4 - t3) * k);
+    float swap = (float)((t5 - t4) * k);
+
+    acc_cpu  += cpu;  acc_evt += evt;  acc_upd += upd;
+    acc_rnd  += rnd;  acc_gui += gui;  acc_swap += swap;
+    if (cpu > cpu_max) cpu_max = cpu;
+    frames++;
+
+    if (last_log == 0)
+        last_log = current_time;
+
+    if (current_time - last_log >= 2000 && frames > 0)
+    {
+        float n = (float)frames;
+        SDL_Log("cpu=%.2fms max=%.2fms  evt=%.2f upd=%.2f rnd=%.2f gui=%.2f  swap=%.2f  fps=%.1f",
+                acc_cpu / n, cpu_max,
+                acc_evt / n, acc_upd / n, acc_rnd / n, acc_gui / n,
+                acc_swap / n,
+                n / ((current_time - last_log) / 1000.0f));
+
+        acc_cpu = acc_evt = acc_upd = acc_rnd = acc_gui = acc_swap = 0;
+        cpu_max = 0;
+        frames = 0;
+        last_log = current_time;
+    }
 
     //SDL_LogDebug(CATEGORY_GAME_SNAKE, "Current FPS: %f", 1.0f / elapsed_time);
+    #endif
 }
 
 int32_t init_game(Engine *engine, Game_state *state)
