@@ -124,7 +124,7 @@ uint32_t init_engine(Engine *engine)
     int drawable_width, drawable_height;
     SDL_GL_GetDrawableSize(engine->window, &drawable_width, &drawable_height);
 
-    SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "Window Size: (%d, %d) Drawable Area Size: (%d, %d) DPI: %f", engine->DISP_WIDTH, engine->DISP_WIDTH, drawable_width, drawable_height, engine->dpi);
+    SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "Window Size: (%d, %d) Drawable Area Size: (%d, %d) DPI: %f", engine->DISP_WIDTH, engine->DISP_HEIGHT, drawable_width, drawable_height, engine->dpi);
 
     // NOTE: No VSync with EMSCRIPTEN
 	#if !defined(__EMSCRIPTEN__)

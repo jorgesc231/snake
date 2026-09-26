@@ -318,7 +318,10 @@ void process_events(Engine *engine, Game_state *state)
 
         if (event.type == SDL_APP_WILLENTERBACKGROUND)
         {
-        	if (state->status != LOST && state->status != INIT && state->status != PAUSED)
+            Mix_HaltChannel(-1);
+            Mix_Pause(-1);
+        	
+            if (state->status != LOST && state->status != INIT && state->status != PAUSED)
         	{
             	state->status = PAUSED;
                 state->accept_input = false;
@@ -341,6 +344,13 @@ void process_events(Engine *engine, Game_state *state)
         if (event.type == SDL_APP_DIDENTERFOREGROUND)
         {
         	// TODO: implement
+            // recreate GL context if necessary; Reload textures/shaders
+        }
+
+        if (event.type == SDL_RENDER_DEVICE_RESET)
+        {
+            // GL Context Lost
+            // Reload GL resources
         }
 
         if (event.type == SDL_APP_TERMINATING)
