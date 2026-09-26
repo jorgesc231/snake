@@ -463,7 +463,7 @@ uint32_t init_audio(Mix_Chunk **sounds_buffer, int SND_MAX)
     }
     else
     {
-        if (SDL_GetNumAudioDevices(0) == 0 || Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 1024) == -1)
+        if (SDL_GetNumAudioDevices(0) <= 0 || Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 1024) == -1)
         {
             SDL_LogError(1, "Couldn't initialize Audio Device\n");
             return 0;
