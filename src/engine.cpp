@@ -24,8 +24,8 @@ uint32_t init_engine(Engine *engine)
     
     bool success = false;
 
-    // NOTE: Necesario para que SDL2 funcione con ANGLE
-    #if !defined(__EMSCRIPTEN__) || !defined(_RPI1) || !defined(__ANDROID__)
+    // NOTE: Necesario para que SDL2 funcione con ANGLE en Windows
+    #if !defined(__EMSCRIPTEN__) && !defined(_RPI1) && !defined(__ANDROID__)
     SDL_SetHint("SDL_OPENGL_ES_DRIVER", "1");
     //SDL_SetHintWithPriority("SDL_OPENGL_ES_DRIVER", "1", SDL_HINT_OVERRIDE);
     #endif
