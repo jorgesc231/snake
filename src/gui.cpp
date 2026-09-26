@@ -327,7 +327,7 @@ void draw_gui(Engine *engine, Game_state *state) {
         
     if (state->show_status_screen) draw_status(engine, state);
         
-#if defined(NDEBUG)
+#ifndef NDEBUG
     if (state->show_demo_window) ImGui::ShowDemoWindow((bool *)&state->show_demo_window);
 
     if (state->show_debug_overlay)
@@ -945,7 +945,7 @@ void draw_status(Engine *engine, Game_state *state) {
     ImGui::End();
 }
 
-#if defined(NDEBUG)
+#ifndef NDEBUG
 void draw_debug_window(Engine *engine, Game_state *state)
 {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;

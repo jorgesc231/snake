@@ -113,7 +113,7 @@ struct Engine {
     int32_t attribs_enabled = false;
 
     Batch main_batch;
-#if defined(NDEBUG)
+#ifndef NDEBUG
     ImFont* font_debug = NULL;
 #endif
     ImFont* font_main = NULL;

@@ -423,7 +423,7 @@ void init_main_shader_attribs(Engine *engine) {
 
 void print_gles_errors()
 {
-#if defined(NDEBUG)
+#ifndef NDEBUG
     GLuint err = glGetError();
     if (err != GL_NO_ERROR) {
         // Failed

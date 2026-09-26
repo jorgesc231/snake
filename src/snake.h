@@ -186,7 +186,7 @@ struct Game_state {
 
     Mix_Chunk* sounds[ARBITRARY_DEFAULT_SOUND_COUNT];
     
-#if defined(NDEBUG)
+#ifndef NDEBUG
     // debug gui state
     int32_t show_demo_window = false;
     int32_t show_another_window = false;

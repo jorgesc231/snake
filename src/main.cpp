@@ -207,8 +207,7 @@ int32_t init_game(Engine *engine, Game_state *state)
 
     print_gles_errors();
 
-    // TODO: No se ejecutan estos asserts a pesar de estar definido NDEBUG...
-#if defined(NDEBUG)
+#ifndef NDEBUG
     assert(engine->textures[0]);
     assert(engine->shaders[TEXTURE_SHADER]);
 #endif
@@ -284,7 +283,7 @@ int32_t init_game(Engine *engine, Game_state *state)
     // NOTE: Permitir que AddFontFromMemoryTTF() transfiera el ownership al font atlas hace que no se cierre de forma inmediata por estar liberando la memoria.
     ImFontConfig font_cfg;
     font_cfg.FontDataOwnedByAtlas = false;
-#if defined(NDEBUG)
+#ifndef NDEBUG
     engine->font_debug = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, &font_cfg);
     IM_ASSERT(engine->font_debug != NULL);
 #endif
@@ -473,7 +472,7 @@ void process_events(Engine *engine, Game_state *state)
 
             }
 
-#if defined(NDEBUG)
+#ifndef NDEBUG
             // Muestra el overlay de depuracion con F1
             if (event.key.keysym.sym == SDLK_F1 && !event.key.repeat)
             {
@@ -1740,7 +1739,7 @@ bool is_over(Rect rect, int32_t x, int32_t y)
 int log_init(Game_state *state)
 {
 	// Set the log priority to show debug logs, change later only for errors?
-#if defined(NDEBUG)
+#ifndef NDEBUG
     SDL_LogSetPriority(CATEGORY_GAME_SNAKE, SDL_LOG_PRIORITY_DEBUG);
     SDL_LogSetPriority(CATEGORY_ENGINE_SNAKE, SDL_LOG_PRIORITY_DEBUG);
 #else

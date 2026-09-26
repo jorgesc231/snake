@@ -9,11 +9,11 @@
 #if defined(__ANDROID__)
 #define ASSET_FOLDER "%s%s"
 #elif defined(NDEBUG)
-// TODO: Deberia cambiar dependiendo de la plataforma...
-#define ASSET_FOLDER "%s../assets/%s"
-#else
 // Release
 #define ASSET_FOLDER "%sassets/%s"
+#else
+// TODO: Deberia cambiar dependiendo de la plataforma...
+#define ASSET_FOLDER "%s../assets/%s"
 #endif
 
 // NOTE: el working dir en raspberry no es el que deberia
