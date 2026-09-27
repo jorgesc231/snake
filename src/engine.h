@@ -13,9 +13,9 @@
 #define PHONE_TITLE_FONT_SIZE 182.0f
 #define PHONE_SCORE_BAR_SIZE 148.0f
 
-#define PC_MAIN_FONT_SIZE 28.0f
+#define PC_MAIN_FONT_SIZE 32.0f
 #define PC_LARGE_FONT_SIZE 32.0f
-#define PC_TITLE_FONT_SIZE 144.0f
+#define PC_TITLE_FONT_SIZE 128.0f
 #define PC_SCORE_BAR_SIZE 60.0f
 
 
@@ -117,8 +117,6 @@ struct Engine {
     ImFont* font_debug = NULL;
 #endif
     ImFont* font_main = NULL;
-    ImFont* font_large = NULL;
-    ImFont* font_title = NULL;
     float font_main_size;
     float font_large_size;
     float font_title_size;

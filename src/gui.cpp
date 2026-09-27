@@ -518,11 +518,13 @@ void draw_status(Engine *engine, Game_state *state) {
     // No Acepta entrada al juego en el menu
     state->accept_input = false;
 
-    ImGui::PushFont(engine->font_large);
+    ImGui::PushFont(engine->font_main);
+    ImGui::SetWindowFontScale(engine->font_large_size / engine->font_main_size);
     
     if (!state->show_menu)
     {
-        ImGui::PushFont(engine->font_title);
+        ImGui::PushFont(engine->font_main);
+        ImGui::SetWindowFontScale(engine->font_title_size / engine->font_main_size);
 
         if (state->status == INIT)
         {
@@ -545,6 +547,7 @@ void draw_status(Engine *engine, Game_state *state) {
             ImGui::Text("%s", get_text(state->selected_language, STR_LOST));
         }
 
+        ImGui::SetWindowFontScale(engine->scale_factor);
         ImGui::PopFont();
 
         // TODO: Deberia centralizar el tema...
@@ -940,6 +943,7 @@ void draw_status(Engine *engine, Game_state *state) {
         ImGui::PopStyleVar(7);
     }
 
+    ImGui::SetWindowFontScale(engine->scale_factor);
     ImGui::PopFont();
 
     ImGui::End();
@@ -1304,6 +1308,7 @@ void draw_debug_window(Engine *engine, Game_state *state)
         ImGui::EndTable();
     }
 
+    ImGui::SetWindowFontScale(engine->scale_factor);
     ImGui::PopFont();
 
     ImGui::End();

@@ -286,19 +286,26 @@ int32_t init_game(Engine *engine, Game_state *state)
     // NOTE: Permitir que AddFontFromMemoryTTF() transfiera el ownership al font atlas hace que no se cierre de forma inmediata por estar liberando la memoria.
     ImFontConfig font_cfg;
     font_cfg.FontDataOwnedByAtlas = false;
+    font_cfg.OversampleH = 1;   // por defecto rasteriza con oversampling 2–3 (para rotar/escalar suave)
+    font_cfg.OversampleV = 1;
+    font_cfg.PixelSnapH = true; // texto más nítido si la escala es entera (2x, 3x)
+
 #ifndef NDEBUG
     engine->font_debug = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, 18.0f, &font_cfg);
     IM_ASSERT(engine->font_debug != NULL);
 #endif
 
     engine->font_main = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, engine->font_main_size, &font_cfg);
-    engine->font_large = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, engine->font_large_size, &font_cfg);
-    engine->font_title = io.Fonts->AddFontFromMemoryTTF(font_data, font_data_size, engine->font_title_size, &font_cfg);
 
+    io.FontGlobalScale = engine->dpi > 200.0f ? 2.0f : 1.0f;
+
+#ifndef NDEBUG
+    int atlas_w, atlas_h;
+    io.Fonts->GetTexDataAsRGBA32(0, &atlas_w, &atlas_h);
+    SDL_Log("Font atlas: %dx%d (%.1f MB)", atlas_w, atlas_h, atlas_w * atlas_h * 4 / (1024.0f * 1024.0f));
+#endif
 
     IM_ASSERT(engine->font_main != NULL);
-    IM_ASSERT(engine->font_large != NULL);
-    IM_ASSERT(engine->font_title != NULL);
     
     set_game_state(state);
     update_snake(state);
