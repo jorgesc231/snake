@@ -689,8 +689,10 @@ void update_game (Game_state *state, float elapsed_time) {
                     
                 i = 0;
 
+                #ifndef NDEBUG
                 SDL_LogDebug(CATEGORY_GAME_SNAKE, "snake: x = %d - y = %d", state->snake[i].position.x, state->snake[i].position.y);
                 SDL_LogDebug(CATEGORY_GAME_SNAKE, "food:  x = %d - y = %d", state->food_pos.x, state->food_pos.y);
+                #endif
             }
         }
     }
