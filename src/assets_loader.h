@@ -12,7 +12,7 @@
 
 #include <glm/glm.hpp>
 
-#define MAX_SND_CHANNELS 8
+#define MAX_SND_CHANNELS 4
 
 #define ATLAS_WIDTH     1024
 #define ATLAS_HEIGHT    1024

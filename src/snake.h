@@ -91,14 +91,12 @@ enum
     CH_ANY = -1,
     CH_EAT,
     CH_GAME_OVER,
-    CH_INTERACTION,
 };
 
 enum
 {
     SND_SNAKE_EAT,
     SND_SNAKE_DIE,
-    SND_INTERACTION,
     SND_MAX
 };
 

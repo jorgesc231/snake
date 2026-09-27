@@ -246,17 +246,20 @@ int32_t init_game(Engine *engine, Game_state *state)
     if (init_audio(state->sounds, SND_MAX))
     {
         // TODO: Reportar errores si no se puede cargar el audio...
-        state->sounds[SND_SNAKE_EAT] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/food.mp3"));
-        state->sounds[SND_INTERACTION] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/move.mp3"));
-        state->sounds[SND_SNAKE_DIE] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/gameover_short.mp3"));
+        state->sounds[SND_SNAKE_EAT] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/food.wav"));
+        state->sounds[SND_SNAKE_DIE] = Mix_LoadWAV(get_data_path(&engine->assets, "sound/gameover.wav"));
 
-        state->audio_loaded = state->sounds[SND_SNAKE_EAT] && state->sounds[SND_INTERACTION] && state->sounds[SND_SNAKE_DIE];
+        state->audio_loaded = state->sounds[SND_SNAKE_EAT] && state->sounds[SND_SNAKE_DIE];
+        
+        if (!state->audio_loaded) {
+            SDL_LogError(CATEGORY_GAME_SNAKE, "Unable to load the audio assets\n");
+        }
     }
     else
     {
         state->audio_loaded = false;
         state->audio_enabled = false;
-        SDL_LogError(CATEGORY_GAME_SNAKE, "Unable to load audio");
+        SDL_LogError(CATEGORY_GAME_SNAKE, "Unable to init audio");
     }
 
     
@@ -351,6 +354,7 @@ void process_events(Engine *engine, Game_state *state)
         {
             // GL Context Lost
             // Reload GL resources
+            init_main_shader_attribs(engine);
         }
 
         if (event.type == SDL_APP_TERMINATING)
@@ -464,8 +468,6 @@ void process_events(Engine *engine, Game_state *state)
             // Pausa con escape
             if (event.key.keysym.sym == SDLK_ESCAPE && !event.key.repeat && state->status != LOST)
             {
-              	if (state->audio_enabled) Mix_PlayChannel(CH_INTERACTION, state->sounds[SND_INTERACTION], 0);
-
                	if (state->status != PAUSED && state->status != INIT)
                	{
                     state->status = PAUSED;
@@ -1589,8 +1591,6 @@ void render_game(Engine *engine, Game_state *state)
     glUseProgram(engine->shaders[TEXTURE_SHADER]);
 
     glBindTexture(GL_TEXTURE_2D, engine->textures[0]);
-
-    init_main_shader_attribs(engine);
 
     // Copy the projection matrix to the GPU
     glUniformMatrix4fv(engine->AttribLocationProjMtx, 1, GL_FALSE, &engine->camera.projection[0][0]);
