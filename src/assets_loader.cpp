@@ -303,7 +303,7 @@ GLuint texture_load(AssetManager *assets, const char* filename)
 
 
     glTexImage2D(GL_TEXTURE_2D, 0, format, texSurf->w, texSurf->h, 0, format, type, texSurf->pixels);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    //glGenerateMipmap(GL_TEXTURE_2D);
     
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
