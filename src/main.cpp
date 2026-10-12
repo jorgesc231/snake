@@ -197,7 +197,7 @@ int32_t init_game(Engine *engine, Game_state *state)
 
     // TODO: solucion temporal...
 #if !defined(__EMSCRIPTEN__)
-    result = load_state_file(engine, CONFIG_FILE_NAME, state);
+    load_state_file(engine, CONFIG_FILE_NAME, state);
 #endif
 
     change_level(state, state->selected_level);
