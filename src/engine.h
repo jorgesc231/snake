@@ -8,9 +8,9 @@
 
 #include "assets_loader.h"
 
-#define PHONE_MAIN_FONT_SIZE 64.0f
-#define PHONE_LARGE_FONT_SIZE 84.0f
-#define PHONE_TITLE_FONT_SIZE 182.0f
+#define PHONE_MAIN_FONT_SIZE 42.0f
+#define PHONE_LARGE_FONT_SIZE 48.0f
+#define PHONE_TITLE_FONT_SIZE 96.0f
 #define PHONE_SCORE_BAR_SIZE 148.0f
 
 #define PC_MAIN_FONT_SIZE 32.0f
