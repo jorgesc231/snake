@@ -184,6 +184,8 @@ struct Game_state {
 
     Mix_Chunk* sounds[ARBITRARY_DEFAULT_SOUND_COUNT];
     
+    int map_dirty = 1;
+
 #ifndef NDEBUG
     // debug gui state
     int32_t show_demo_window = false;

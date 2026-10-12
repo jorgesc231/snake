@@ -74,6 +74,7 @@ struct Batch {
     GLuint vertex_count;
     Vertex vertices[4000];
     Vertex* vertices_ptr;
+    bool attribs_enabled = false;
 };
 
 struct Engine {
@@ -124,6 +125,11 @@ struct Engine {
     glm::vec4 clear_color = glm::vec4(0.34f, 0.54f, 0.20f, 1.0f);
     glm::vec4 cell_color1 = DEFAULT_CELL_COLOR1;
     glm::vec4 cell_color2 = DEFAULT_CELL_COLOR2;
+
+    // Map data
+    Batch map_batch;
+    int map_key_skin, map_key_rows, map_key_cols, map_key_cell;
+    Rect map_key_rect;
 };
 
 
@@ -133,14 +139,13 @@ void shutdown_engine(Engine *engine);
 void init_camera_2d(Camera *camera, float width, float height, glm::vec2 camera_pos);
 
 void begin_batch(Batch *batch);
-void draw_batch(Engine engine, Batch batch);
 
 void create_quad(Batch *batch, Quad quad, SPRITE_ID sprite_id, glm::vec4 color);
 void create_color_triangle(Batch *batch, Triangle triangle, glm::vec4 color);
 
 void print_gles_errors();
 
-void init_main_shader_attribs(Engine *engine);
+void bind_batch_shader_attribs(Engine *engine, Batch* batch);
 
 float sign (simple_vertex p1, simple_vertex p2, simple_vertex p3);
 bool is_over_triangle (Triangle triangle, int x, int y);

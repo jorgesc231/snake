@@ -375,6 +375,8 @@ void change_level (Game_state *state, GAME_LEVEL level)
     state->rows = state->levels[level].rows;
     state->columns = state->levels[level].columns;
 
+    state->map_dirty = 1;
+
     set_game_state(state);
 }
 

@@ -163,9 +163,9 @@ uint32_t init_engine(Engine *engine)
     SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "SDL_VERSION = %d.%d.%d\n", sdl_version.major, sdl_version.minor, sdl_version.patch);
     SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "SDL_IMAGE_VERSION = %d.%d.%d\n", image_version->major, image_version->minor, image_version->patch);
     SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "SDL_MIXER_VERSION = %d.%d.%d\n", mixer_version->major, mixer_version->minor, mixer_version->patch);
-    SDL_LogInfo(CATEGORY_ENGINE_SNAKE,"GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
-    SDL_LogInfo(CATEGORY_ENGINE_SNAKE,"GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
-    SDL_LogInfo(CATEGORY_ENGINE_SNAKE,"GL_VERSION = %s\n",  glGetString(GL_VERSION));
+    SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "GL_VENDOR = %s\n",  glGetString(GL_VENDOR));
+    SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "GL_RENDERER = %s\n",  glGetString(GL_RENDERER));
+    SDL_LogInfo(CATEGORY_ENGINE_SNAKE, "GL_VERSION = %s\n",  glGetString(GL_VERSION));
 
     const char* glsl_version = "#version 100";
     // Setup Dear ImGui context
@@ -231,11 +231,15 @@ uint32_t init_engine(Engine *engine)
     }
 
 
-    // Create a dynamic vertex buffer
+    // Create a dynamic vertex buffer for main batch
     glGenBuffers(1, &engine->main_batch.vertex_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, engine->main_batch.vertex_buffer);
     glBufferData(GL_ARRAY_BUFFER, MaxVertexCount * sizeof(Vertex), NULL, GL_DYNAMIC_DRAW);
 
+    // Create a dynamic vertex buffer for map batch
+    glGenBuffers(1, &engine->map_batch.vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, engine->map_batch.vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, MaxVertexCount * sizeof(Vertex), NULL, GL_STATIC_DRAW);
 
     // Create the index buffer
     glGenBuffers(1, &engine->main_batch.index_buffer);
@@ -394,7 +398,7 @@ void begin_batch(Batch *batch)
 }
 
 // TODO: Podria replicar el comportamiento de los VAO usando funciones...
-void init_main_shader_attribs(Engine *engine) {
+void bind_batch_shader_attribs(Engine *engine, Batch* batch) {
 
     if (!engine->attribs_enabled)
     {
@@ -402,10 +406,10 @@ void init_main_shader_attribs(Engine *engine) {
         engine->AttribLocationVtxUV = glGetAttribLocation(engine->shaders[TEXTURE_SHADER], "a_texCoord");
         engine->AttribLocationVtxColor = glGetAttribLocation(engine->shaders[TEXTURE_SHADER], "a_color");;
 
-        engine->attribs_enabled = true;
+        batch->attribs_enabled = true;
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, engine->main_batch.vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, batch->vertex_buffer);
 
     // NOTA: Este estado se eliminan cuando se usa glBindBuffer(GL_ARRAY_BUFFER, 0);
     glVertexAttribPointer(engine->AttribLocationVtxPos, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));

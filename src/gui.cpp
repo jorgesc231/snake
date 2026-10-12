@@ -71,6 +71,8 @@ void calculate_gui(Game_state *state, int32_t screen_width, int32_t screen_heigh
     // Center the score bar
     cut_left(&state->score_rect, diff * 0.5f);
     cut_right(&state->score_rect, diff * 0.5f);
+
+    state->map_dirty = 1;
 }
 
 void create_touch_controls(Game_state *state)

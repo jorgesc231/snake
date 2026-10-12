@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <assert.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <SDL2/SDL_opengles2.h>
 
 #include <imgui_impl_sdl2.h>
@@ -23,6 +25,10 @@
 // Emscripten necesita una funcion especial para pasarle parametros al main loop
 Engine engine;
 Game_state state;
+
+void shutdown_game(Engine *engine);
+void rebuild_map_batch(Engine *engine, Game_state *state);
+int map_needs_rebuild(Engine *e, Game_state *s);
 
 int main(int argc, char* args[])
 {
@@ -149,6 +155,8 @@ void main_loop()
 
 int32_t init_game(Engine *engine, Game_state *state)
 {
+    int result = 1;
+
 	get_system_language(state);
 
     if (engine->device_type == ENGINE_PHONE)
@@ -189,7 +197,7 @@ int32_t init_game(Engine *engine, Game_state *state)
 
     // TODO: solucion temporal...
 #if !defined(__EMSCRIPTEN__)
-    load_state_file(engine, CONFIG_FILE_NAME, state);
+    result = load_state_file(engine, CONFIG_FILE_NAME, state);
 #endif
 
     change_level(state, state->selected_level);
@@ -220,7 +228,7 @@ int32_t init_game(Engine *engine, Game_state *state)
 
     glUseProgram(engine->shaders[TEXTURE_SHADER]);
 
-    init_main_shader_attribs(engine);
+    bind_batch_shader_attribs(engine, &engine->main_batch);
 
     // Get the uniform location
     engine->AttribLocationProjMtx = glGetUniformLocation(engine->shaders[TEXTURE_SHADER], "u_Projection");
@@ -310,7 +318,7 @@ int32_t init_game(Engine *engine, Game_state *state)
     set_game_state(state);
     update_snake(state);
 
-    return 1;
+    return result;
 }
 
 void process_events(Engine *engine, Game_state *state)
@@ -361,7 +369,7 @@ void process_events(Engine *engine, Game_state *state)
         {
             // GL Context Lost
             // Reload GL resources
-            init_main_shader_attribs(engine);
+            //bind_batch_shader_attribs(engine);
         }
 
         if (event.type == SDL_APP_TERMINATING)
@@ -833,85 +841,12 @@ void render_game(Engine *engine, Game_state *state)
     // Init the main batch
     begin_batch(&engine->main_batch);
 
-    // add operations to the batch
+    // Redraw the map when the map changes
+    if (map_needs_rebuild(engine, state))
+        rebuild_map_batch(engine, state);
 
     // Draw the score bar background
     create_quad(&engine->main_batch, state->score_rect, NO_TEXTURE, glm::vec4(0.07f, 0.09f, 0.07f, 1.0f));
-
-    // Draw the map
-    for (int32_t y = 0; y < state->rows; y++)
-    {
-        for (int32_t x = 0; x < state->columns; x++)
-        {
-            Quad map_quad = (Quad) {x * state->cell_size + state->screen_rect.x, y * state->cell_size + state->screen_rect.y, state->cell_size, state->cell_size};
-
-            if (state->game_skin == SKIN_DEFAULT)
-            {
-                if (y % 2 == 0)
-                {
-                    if (x % 2 == 0) {
-                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color2);
-                    } else {
-                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color1);
-                    }
-                } else {
-                    if (x % 2 == 0) {
-                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color1);
-                    } else {
-                        create_quad(&engine->main_batch, map_quad, NO_TEXTURE, engine->cell_color2);
-                    }
-                }
-            }
-            else if (state->game_skin == SKIN_RARE)
-            {
-                if (y % 2 == 0)
-                {
-                    if (x % 2 == 0) {
-                        create_quad(&engine->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                    } else {
-                    	create_quad(&engine->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                    }
-                } else {
-                    if (x % 2 == 0) {
-                    	create_quad(&engine->main_batch, map_quad, RARE_GRASS_DARK, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                    } else {
-                    	create_quad(&engine->main_batch, map_quad, RARE_GRASS_CLEAR, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                    }
-                }
-            }
-            else if (state->game_skin == SKIN_MINIMAL)
-            {
-            	create_quad(&engine->main_batch, map_quad, NO_TEXTURE, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-            }
-            else if (state->game_skin == SKIN_RETRO)
-            {
-                create_quad(&engine->main_batch, map_quad, RETRO_CELL, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            }
-            else if (state->game_skin == SKIN_CLASSIC)
-            {
-            	create_quad(&engine->main_batch, map_quad, CLASSIC_BODY, glm::vec4(0.25f, 0.25f, 0.25f, 0.1f));
-            }
-        }
-    }
-
-    // Draw the border for the classic skin
-    if (state->game_skin == SKIN_CLASSIC)
-    {
-        int32_t border_size = state->border_size;
-        int32_t border_height = state->cell_size * state->rows;
-
-        // Left Border
-        Quad border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y, border_size, border_height + border_size};
-        create_quad(&engine->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
-
-        // Right Border
-        border_quad = (Quad) {state->screen_rect.x + state->screen_rect.width, state->screen_rect.y, border_size, border_height + border_size};
-        create_quad(&engine->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
-
-        // Bottom Border
-        border_quad = (Quad) {state->screen_rect.x - border_size, state->screen_rect.y + border_height, state->screen_rect.width + border_size, border_size};
-        create_quad(&engine->main_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
-    }
 
     // Animar de forma lineal el decrecimiento y creciemiento de un segmento de la serpiente
     int shrinking_size = 0;
@@ -1590,19 +1525,6 @@ void render_game(Engine *engine, Game_state *state)
 
     draw_touch_controls(state, engine);
 
-    
-    // Set dynamic vertex buffer
-    glBindBuffer(GL_ARRAY_BUFFER, engine->main_batch.vertex_buffer);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, engine->main_batch.vertex_count * sizeof(Vertex), engine->main_batch.vertices);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, engine->main_batch.index_buffer);
-    
-    glUseProgram(engine->shaders[TEXTURE_SHADER]);
-
-    glBindTexture(GL_TEXTURE_2D, engine->textures[0]);
-
-    // Copy the projection matrix to the GPU
-    glUniformMatrix4fv(engine->AttribLocationProjMtx, 1, GL_FALSE, &engine->camera.projection[0][0]);
 
     // TODO: Esto no deberia ser asi...
     if (state->game_skin == SKIN_RETRO)
@@ -1625,7 +1547,28 @@ void render_game(Engine *engine, Game_state *state)
     glClear(GL_COLOR_BUFFER_BIT);
 
     print_gles_errors();
+
+
+    glUseProgram(engine->shaders[TEXTURE_SHADER]);
+    glBindTexture(GL_TEXTURE_2D, engine->textures[0]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, engine->main_batch.index_buffer);
     
+    // Copy the projection matrix to the GPU
+    glm::mat4 proj = engine->camera.projection;
+    proj = glm::translate(proj, glm::vec3((float)offsetShake.x, (float)offsetShake.y, 0.f));
+    glUniformMatrix4fv(engine->AttribLocationProjMtx, 1, GL_FALSE, &engine->camera.projection[0][0]);
+    
+    // Draw the static map
+    glBindBuffer(GL_ARRAY_BUFFER, engine->map_batch.vertex_buffer);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, engine->map_batch.vertex_count * sizeof(Vertex), engine->map_batch.vertices);
+    bind_batch_shader_attribs(engine, &engine->map_batch);
+    glDrawElements(GL_TRIANGLES, engine->map_batch.index_count, GL_UNSIGNED_SHORT, NULL);
+    
+    // Set dynamic vertex buffer for Snake, food, score bar
+    glBindBuffer(GL_ARRAY_BUFFER, engine->main_batch.vertex_buffer);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, engine->main_batch.vertex_count * sizeof(Vertex), engine->main_batch.vertices);
+    bind_batch_shader_attribs(engine, &engine->main_batch);
+       
     // NOTA: OpenGL ES 2.0 solo soporta indices de tipo SHORT, 3.0 soporta int.
     glDrawElements(GL_TRIANGLES, engine->main_batch.index_count, GL_UNSIGNED_SHORT, NULL);
 
@@ -1774,4 +1717,124 @@ void shutdown_game(Engine *engine)
 	shutdown_engine(engine);
 	Mix_CloseAudio();
     return;
+}
+
+int map_needs_rebuild(Engine *e, Game_state *s)
+{
+    return s->map_dirty
+        || e->map_key_skin != s->game_skin
+        || e->map_key_rows != s->rows
+        || e->map_key_cols != s->columns
+        || e->map_key_cell != s->cell_size
+        || e->map_key_rect.x != s->screen_rect.x
+        || e->map_key_rect.y != s->screen_rect.y
+        || e->map_key_rect.width  != s->screen_rect.width
+        || e->map_key_rect.height != s->screen_rect.height;
+}
+
+
+void rebuild_map_batch(Engine *e, Game_state *s)
+{
+    begin_batch(&e->map_batch);
+
+    SPRITE_ID sprite = NO_TEXTURE;
+    glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    for (int32_t y = 0; y < s->rows; y++)
+    for (int32_t x = 0; x < s->columns; x++)
+    {
+        Quad map_quad = { x * s->cell_size + s->screen_rect.x, y * s->cell_size + s->screen_rect.y, s->cell_size, s->cell_size };
+        
+            if (s->game_skin == SKIN_DEFAULT)
+            {
+                if (y % 2 == 0)
+                {
+                    if (x % 2 == 0) {
+                        sprite = NO_TEXTURE;
+                        color = e->cell_color2;
+                    } else {
+                        sprite = NO_TEXTURE;
+                        color = e->cell_color1;
+                    }
+                } else {
+                    if (x % 2 == 0) {
+                        sprite = NO_TEXTURE;
+                        color = e->cell_color1;
+                    } else {
+                        sprite = NO_TEXTURE;
+                        color = e->cell_color2;
+                    }
+                }
+            }
+            else if (s->game_skin == SKIN_RARE)
+            {
+                if (y % 2 == 0)
+                {
+                    if (x % 2 == 0) {
+                        sprite = RARE_GRASS_CLEAR;
+                        color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                        
+                    } else {
+                        sprite = RARE_GRASS_DARK;
+                        color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                    }
+                } else {
+                    if (x % 2 == 0) {
+                        sprite = RARE_GRASS_DARK;
+                        color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                    } else {
+                        sprite = RARE_GRASS_CLEAR;
+                        color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                    }
+                }
+            }
+            else if (s->game_skin == SKIN_MINIMAL)
+            {
+                sprite = NO_TEXTURE;
+                color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+            }
+            else if (s->game_skin == SKIN_RETRO)
+            {
+                sprite = RETRO_CELL;
+                color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+            else if (s->game_skin == SKIN_CLASSIC)
+            {
+                sprite = CLASSIC_BODY;
+                color = glm::vec4(0.25f, 0.25f, 0.25f, 0.1f);
+            }
+
+        create_quad(&e->map_batch, map_quad, sprite, color);
+    }
+
+    // SKIN CLASSIC border
+    if (s->game_skin == SKIN_CLASSIC)
+    {
+        int32_t border_size = s->border_size;
+        int32_t border_height = s->cell_size * s->rows;
+
+        // Left Border
+        Quad border_quad = (Quad) {s->screen_rect.x - border_size, s->screen_rect.y, border_size, border_height + border_size};
+        create_quad(&e->map_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+
+        // Right Border
+        border_quad = (Quad) {s->screen_rect.x + s->screen_rect.width, s->screen_rect.y, border_size, border_height + border_size};
+        create_quad(&e->map_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+
+        // Bottom Border
+        border_quad = (Quad) {s->screen_rect.x - border_size, s->screen_rect.y + border_height, s->screen_rect.width + border_size, border_size};
+        create_quad(&e->map_batch, border_quad, NO_TEXTURE, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, e->map_batch.vertex_buffer);
+    glBufferSubData(GL_ARRAY_BUFFER, 0,
+        e->map_batch.vertex_count * sizeof(Vertex),
+        e->map_batch.vertices);
+
+    e->map_key_skin = s->game_skin;
+    e->map_key_rows = s->rows;
+    e->map_key_cols = s->columns;
+    e->map_key_cell = s->cell_size;
+    e->map_key_rect = s->screen_rect;
+    s->map_dirty = 0;
 }
