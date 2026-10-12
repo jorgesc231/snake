@@ -275,6 +275,7 @@ void init_camera_2d(Camera *camera, float width, float height, glm::vec2 camera_
 void create_quad(Batch *batch, Quad quad, SPRITE_ID sprite_id, glm::vec4 color)
 {
     AtlasSprite sprite = DescAtlas[sprite_id];
+    const float pad = 0.5f;
 
     batch->vertices_ptr->x = quad.x;
     batch->vertices_ptr->y = quad.y;
@@ -284,8 +285,8 @@ void create_quad(Batch *batch, Quad quad, SPRITE_ID sprite_id, glm::vec4 color)
     batch->vertices_ptr->b = color.b;
     batch->vertices_ptr->a = color.a;
 
-    batch->vertices_ptr->u = ((sprite.positionX) / (float)ATLAS_WIDTH);
-    batch->vertices_ptr->v = ((sprite.positionY) / (float)ATLAS_HEIGHT);
+    batch->vertices_ptr->u = ((sprite.positionX + pad) / (float)ATLAS_WIDTH);
+    batch->vertices_ptr->v = ((sprite.positionY + pad) / (float)ATLAS_HEIGHT);
     batch->vertices_ptr++;
 
     // Segundo vertice
@@ -297,8 +298,8 @@ void create_quad(Batch *batch, Quad quad, SPRITE_ID sprite_id, glm::vec4 color)
     batch->vertices_ptr->b = color.b;
     batch->vertices_ptr->a = color.a;
 
-    batch->vertices_ptr->u = ((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH);
-    batch->vertices_ptr->v = ((sprite.positionY) / (float)ATLAS_HEIGHT);
+    batch->vertices_ptr->u = ((sprite.positionX + sprite.sourceWidth - pad) / (float)ATLAS_WIDTH);
+    batch->vertices_ptr->v = ((sprite.positionY + pad) / (float)ATLAS_HEIGHT);
     batch->vertices_ptr++;
 
     // Tercer vertice
@@ -310,8 +311,8 @@ void create_quad(Batch *batch, Quad quad, SPRITE_ID sprite_id, glm::vec4 color)
     batch->vertices_ptr->b = color.b;
     batch->vertices_ptr->a = color.a;
 
-    batch->vertices_ptr->u = ((sprite.positionX + sprite.sourceWidth) / (float)ATLAS_WIDTH);
-    batch->vertices_ptr->v = ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT);
+    batch->vertices_ptr->u = ((sprite.positionX + sprite.sourceWidth - pad) / (float)ATLAS_WIDTH);
+    batch->vertices_ptr->v = ((sprite.positionY + sprite.sourceHeight - pad) / (float)ATLAS_HEIGHT);
     batch->vertices_ptr++;
 
     // Cuarto vertice
@@ -323,8 +324,8 @@ void create_quad(Batch *batch, Quad quad, SPRITE_ID sprite_id, glm::vec4 color)
     batch->vertices_ptr->b = color.b;
     batch->vertices_ptr->a = color.a;
 
-    batch->vertices_ptr->u = ((sprite.positionX) / (float)ATLAS_WIDTH);
-    batch->vertices_ptr->v = ((sprite.positionY + sprite.sourceHeight) / (float)ATLAS_HEIGHT);
+    batch->vertices_ptr->u = ((sprite.positionX + pad) / (float)ATLAS_WIDTH);
+    batch->vertices_ptr->v = ((sprite.positionY + sprite.sourceHeight - pad) / (float)ATLAS_HEIGHT);
     batch->vertices_ptr++;
 
     batch->index_count += 6;
